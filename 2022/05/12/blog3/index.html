@@ -20,25 +20,25 @@
 <h2 id="加固代际"><a href="#加固代际" class="headerlink" title="加固代际"></a>加固代际</h2><p>根据不同的理解，现在加固代际基本上可以按照五代或者三代去区分。</p>
 <h3 id="第一代：动态加载类"><a href="#第一代：动态加载类" class="headerlink" title="第一代：动态加载类"></a>第一代：动态加载类</h3><p>Apk中没有完整原始的Dex，需要运行时动态的加载到内存中</p>
 <h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><ul>
-<li><p>  落地加载<br>我们拿到需要加密的Apk和自己的壳程序Apk，然后用加密算法对源Apk进行加密再将壳Apk进行合并得到新的Dex文件，最后替换壳程序中的dex文件即可，得到新的Apk,那么这个新的Apk我们也叫作脱壳程序Apk.他已经不是一个完整意义上的Apk程序了，他的主要工作是：负责解密源Apk.然后加载Apk,让其正常运行起来。运行时首先将我们的Dex文件或者Apk文件解密，然后利用DexClassLoader加载器将其加载进内存中，然后利用反射加载待加固的Apk的Appkication，然后运行待加固程序即可。<br><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawUSsXCE5Yq2eCQ6jRq0DHBTlVuWTLlhTReK431cqsIfTT22tUsHriaNA/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"><br><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iaw7MOGibmdzviajW0twnNJ0FLQwdaXJP94XGWmL4EGcFJ2vDNlAAjdT8PA/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<li><p>  落地加载<br>我们拿到需要加密的Apk和自己的壳程序Apk，然后用加密算法对源Apk进行加密再将壳Apk进行合并得到新的Dex文件，最后替换壳程序中的dex文件即可，得到新的Apk,那么这个新的Apk我们也叫作脱壳程序Apk.他已经不是一个完整意义上的Apk程序了，他的主要工作是：负责解密源Apk.然后加载Apk,让其正常运行起来。运行时首先将我们的Dex文件或者Apk文件解密，然后利用DexClassLoader加载器将其加载进内存中，然后利用反射加载待加固的Apk的Appkication，然后运行待加固程序即可。<br><img src="/2022/05/12/blog3/1.png"><br><img src="/2022/05/12/blog3/2.png"></p>
 </li>
 <li><p>  不落地加载<br>落地加载将Dex文件解密出来会保存到文件中，再通过DexClassLoader加载进内存中，而不落地加载直接重写DexClassLoader使其可以直接加载字节数组，避免写入文件中。我们要做的是重写DexClassLoader，而这涉及到三个函数defineClass、findClass、loadClass，在一个类被加载的时候，会先后调用这三个函数加载一个类，所以我们需要重写这三个函数。系统的DexClassLoader加载Dex进入内存的也必然是通过字节加载的，而在系统so中的libdvm.so中的openDexFile可以直接加载Dex文件，那么现在清楚了，我们可以通过编写so文件调用openDexFile函数加载Dex字节数组，值得注意的是，openDexFile函数返回值为一个int类型的cookie，可以简单理解成一个dex文件的’身份码’，通过该’身份码’即可操控这个dex文件,至于怎么调用该函数，可以通过dlopen和dlsym函数调用。</p>
 </li>
 </ul>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawqG5NVaF6g0uDRCeFBhIxJvC3DV8EU3fJDHerj1Nced6ib69GBH8czicw/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/3.png"></p>
 <h4 id="优劣"><a href="#优劣" class="headerlink" title="优劣"></a>优劣</h4><ul>
 <li><p>  优点<br>比较容易实现，无明显的兼容性问题 能有效对抗静态分析和二次打包</p>
 </li>
 <li><p>  缺点<br>启动时需要进行大量的解密运算，容易造成卡死的情况 在内存中的数据为完整的Dex，通过动态调试Dump内存即可获取完整的Dex</p>
 </li>
 </ul>
-<h4 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h4><p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawWKIHYkLHcNE9FxicrnPCry1n6hHhcguOmKxlvf2iatFYt3BWtPRb8iaKg/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"><br>Dex字符串加密 资源加密 对抗反编译 对抗调试 Dex动态加载 so加密</p>
+<h4 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/4.png"><br>Dex字符串加密 资源加密 对抗反编译 对抗调试 Dex动态加载 so加密</p>
 <h3 id="第二代：函数抽取类"><a href="#第二代：函数抽取类" class="headerlink" title="第二代：函数抽取类"></a>第二代：函数抽取类</h3><h4 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h4><p>主要分为两个步骤指令抽取和指令还原</p>
 <ul>
 <li>  指令抽取<br>解析原始Dex文件格式，保存所有方法的代码结构体信息，通过传入需要置空指令的方法和类名，检索到其代码结构体信息。通过方法的代码结构体信息获取指令个数和偏移地址，构造空指令集，然后覆盖原始指令，重新计算dex文件的checksum和signature信息，回写到头部信息中。</li>
 </ul>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawVDMiaJwmJgic7Sd4GTxiargzOgxIzD6mxTZokiaXhmuPiaYAsFxz39MJOBg/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawaHhZwl7cYVibRwnnUtPCr7oHKCqoXEBib6ctdficqQ8IFq5OzpgT8sxyw/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/5.png"></p>
+<p><img src="/2022/05/12/blog3/6.png"></p>
 <ul>
 <li>  指令还原<br>native层hook系统函数dexFindClass，获取类结构体信息（dexFindClass函数用于查找类的DexClassDef结构），获取类中所有的方法信息，通过指定方法名进行过滤，获取该方法的代码结构体信息，获取该方法被抽取的指令集，修改方法对应的内存地址为可读属性，直接进行指令还原。</li>
 </ul>
@@ -48,16 +48,16 @@
 <li><p>  缺点<br>使用大量的虚拟机内部结构，会出现兼容性问题，无法保护所有方法 无法对抗自定义虚拟机 它跟虚拟机的JIT优化出现冲突，达不到最佳的性能表现</p>
 </li>
 </ul>
-<h4 id="特点-1"><a href="#特点-1" class="headerlink" title="特点"></a>特点</h4><p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawhhuz4E0gjBI9uric4kwn3thf1CcIymIchMhNvIr7ibFlyMcacibIh4QbQ/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<h4 id="特点-1"><a href="#特点-1" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/7.png"></p>
 <p>除一代有的特点外 内存中无完整、连续的Dex so代码混淆、膨胀</p>
 <h3 id="第三代：VMP、Dex2C类"><a href="#第三代：VMP、Dex2C类" class="headerlink" title="第三代：VMP、Dex2C类"></a>第三代：VMP、Dex2C类</h3><h4 id="原理-2"><a href="#原理-2" class="headerlink" title="原理"></a>原理</h4><ul>
 <li>  VMP<br>执行到关键代码时进入壳so执行，关于这一点，不同的厂商有着不同的做法，比如把关键函数变成native函数，在壳so中动态或者静态注册</li>
 </ul>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iaw2HgrvLGII917rkzAW5zxz8BQuZaNicdl4H0CApNk1xGdRxib8IH09kCw/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/8.png"></p>
 <p>再比如更改关键方法的方法体</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iaw2HgrvLGII917rkzAW5zxz8BQuZaNicdl4H0CApNk1xGdRxib8IH09kCw/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/9.png"></p>
 <p>无论哪种方法其实都是为了能让壳函数代替原函数去执行 当执行该函数的指令时，解析出指令的OpCode,通过一个巨大的switch case找到处理对应OpCode的函数，然后执行</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawVMpKp5zmz9GPOj1stAhDrK1wLiahrS854o0JCuCeo2gfpHsaaywzX8w/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/10.png"></p>
 <p>简单讲就是壳将原本的指令进行一次封装，将原本的指令转换为另一种表现形式</p>
 <ul>
 <li>  Dex2C<br>首先也是将关键代码注册为native函数，主要借助于JNI反射技术，将Java层的方法全部反射为native层，增大分析难度。之后再通过混淆、字符串加密等操作生成so，最后将so进行加固保护。</li>
@@ -68,7 +68,7 @@
 <li><p>  缺点<br>效率较低，启动、运行时都比较耗时稳定性、可控性差，容易产生崩溃</p>
 </li>
 </ul>
-<h4 id="特点-2"><a href="#特点-2" class="headerlink" title="特点"></a>特点</h4><p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iaw0j5iaUy6Ev5rl2YH1RPUv8htYD88tWMHIQaicp5f1IDjEJdsIRKG6Aww/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<h4 id="特点-2"><a href="#特点-2" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/11.png"></p>
 <p>除一、二代全部特点外 so代码虚拟化 对抗之前所有的脱壳方法</p>
 <h3 id="so加密"><a href="#so加密" class="headerlink" title="so加密"></a>so加密</h3><h4 id="section加密"><a href="#section加密" class="headerlink" title="section加密"></a>section加密</h4><ul>
 <li>  原理<br>将关键方法，存放在自定义的section中，通过解析每个section，将我们自定义的section进行加密。因为so在加载时会优先加载.init_array，所以将解密方法放在.init_array中，获取内存中各个section的起始地址和大小，将需要解密的section还原。</li>
@@ -76,8 +76,8 @@
 <h4 id="函数加密"><a href="#函数加密" class="headerlink" title="函数加密"></a>函数加密</h4><ul>
 <li>  原理<br>解析so，根据方法名找到指定的方法，将方法进行加密。加载so时，获取指定方法的地址，通过解密方法将指定方法解密。</li>
 </ul>
-<h4 id="特点-3"><a href="#特点-3" class="headerlink" title="特点"></a>特点</h4><p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawRwTe3baicqT915EPpFrojJra4ic1daOVawvhmIVmysYcREIKq9IEb8xQ/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawuYSKxkoFgn6W5BKld2LS9VicYKrGV6iaqng7PAUwCaeftEe0bUKxs0hw/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<h4 id="特点-3"><a href="#特点-3" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/12.png"></p>
+<p><img src="/2022/05/12/blog3/13.png"></p>
 <p>由于原本的指令已经被加密成其他的字节，IDA等静态分析工具中会出现大段无法识别的代码</p>
 <h2 id="各厂商特征"><a href="#各厂商特征" class="headerlink" title="各厂商特征"></a>各厂商特征</h2><p>除此外还有很多大佬们可以自行总结</p>
 <h3 id="某梆"><a href="#某梆" class="headerlink" title="某梆"></a>某梆</h3><p>lib/libDexHelper.so、lib/libDexHelper-x86.so、</p>
@@ -89,29 +89,29 @@
 <h3 id="某付盾"><a href="#某付盾" class="headerlink" title="某付盾"></a>某付盾</h3><p>lib/libegis.so、lib/libegis-x86.so</p>
 <h2 id="脱壳工具"><a href="#脱壳工具" class="headerlink" title="脱壳工具"></a>脱壳工具</h2><h3 id="FRIDA-DEXDump"><a href="#FRIDA-DEXDump" class="headerlink" title="FRIDA-DEXDump"></a>FRIDA-DEXDump</h3><h4 id="原理-3"><a href="#原理-3" class="headerlink" title="原理"></a>原理</h4><p>通过Frida在内存中搜索dex\n035，因为Dex的头部都会存在一个dex\n035的模数，所以通过在内存中搜索dex\n035可以搜索到Dex文件。对于一些Dex它们被抹去了头部信息，对于这样的情况，FRIDA-DEXDump也提供了对应的方法，通过遍历当前进程中所有可以读的内存段，通过判断这个段的大小和Dex文件中一些关键区域的关系可以判断是否为一个Dex。</p>
 <h4 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h4><p>在FRIDA-DEXDumpGitHub中下载代码到本地或者通过<code>pip3 install frida-dexdump</code> 安装</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawZxUyYtNWIFOcDhsIiaria6qQm86MAptmPiaJDtFwNI9HCABfjyUCwJw1w/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/14.png"></p>
 <p>用法就是首先打开，我们需要脱壳的软件，然后执行<code>python main.py -d</code>程序执行开始检索内存中的Dex</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawia2DrpJcv0nsaIEv9ZiaLL6BNvCkMpgE0VCNrwqA3v6MXx1WBb4fNh5A/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/15.png"></p>
 <p>检索到后会保存在SavePath对应的目录下</p>
 <p>也可以通过<code>python main.py -h</code>查看它的其他使用方法</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iaw7SKQ2Yib1WPeSMibC3DbNquS6RIPo5UZXktTZCs2Euia98SHdprTksGVA/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/16.png"></p>
 <p>最终得到它脱出来的Dex，可以看下它脱壳效果</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawamw2jjNIpDyAQDyMqxlvGLubW6Rrsfcjm6f1xBPKSNxxekhuF3m0ibA/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/17.png"></p>
 <h3 id="Youpk"><a href="#Youpk" class="headerlink" title="Youpk"></a>Youpk</h3><h4 id="原理-4"><a href="#原理-4" class="headerlink" title="原理"></a>原理</h4><p>从ClassLinker中遍历所有DexFile对象，在虚拟机中Dex文件都用DexFile对象来表示，并Dump出所有Dex文件。此时只是整体Dump，Dex中的方法还未还原。遍历DexFile中的ClassDef结构，获取到所有Class，主动调用Class中的所有的方法，让程序强制走switch解释器执行，在解释器中添加Hook代码，当方法执行时自动保存CodeItem。根据保存的CodeItem和Dump下来的Dex进行合并，还原Dex中被抽取的指令。</p>
 <h4 id="使用-1"><a href="#使用-1" class="headerlink" title="使用"></a>使用</h4><p>首先下载刷机包和还原工具，目前仅支持刷pixel 1手机</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawMq8jwTlXyUPtzuP78lIGxkrZ5Xw24xTneXfvxOYypFIZDu5qLaarvg/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/18.png"></p>
 <p>解压相关的镜像，<code>fastboot flash xxx /Download/xxx.img</code>依次刷入</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawMvopyKmGeETQhcOibFATHxP28CXBL2pEf5PKZjFGtkjDOEAhNxC8Idg/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/19.png"></p>
 <p>配置待脱壳的App包名<code>adb shell &quot;echo com.xxx &gt;&gt; /data/local/tmp/unpacker.config&quot;</code></p>
 <p>启动Apk等待脱壳，每隔10秒将自动重新脱壳(已完全dump的dex将被忽略), 当日志打印unpack end时脱壳完成</p>
 <p>dump文件路径为/data/data/包名/unpacker，使用adb命令将文件pull出</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawDr7qxwBQ9ZwXBoatVibppo1bq1awbYgjv76Q4icbBTnBKK3eBekicIgIQ/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/20.png"></p>
 <p>使用dexfixer.jar修复Dex，<code>java -jar dexfixer.jar /path/unpacker /path/output</code></p>
 <p>最后我们对比一下还原前后的代码</p>
 <p>还原前</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawY0gJlYiaJ4LjqLIQP7mJtjTvo8icvB0Ug2vafEIibmZkAzvpzpjfmGWhA/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/21.png"></p>
 <p>还原后</p>
-<p><img src="https://mmbiz.qpic.cn/mmbiz_png/uVibiccmzBulgdib3nvLDicu47GtKpYEj2iawGjdPoTewQcibhLW8tRXwCZBLOsw86h4FsZZZLibicHhE1XgOb6bEsSdkA/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1" alt="图片"></p>
+<p><img src="/2022/05/12/blog3/22.png"></p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文简单地总结了一下Android加固的背景和发展历史，也介绍了一些目前常见的脱壳工具。对于so加密的情况，目前也有许多方法应对，比如ida动态调试dump内存中的so，GG模拟器dump内存，frida dump so，unidbg等等。对于混淆的so，也有jnitrace，unidbg，还有hluwa大佬的大作obpo等工具辅助我们分析。除此以外还有还有一些优秀的脱壳工具如Fart等，我也没有再做介绍了。总之感谢这些大佬们的努力和开源，没有你们就没有白嫖的我们，哈哈…</p>
 </div></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">Author: </span><span class="post-copyright-info"><a href="mailto:undefined">Andy</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">Link: </span><span class="post-copyright-info"><a href="http://example.com/2022/05/12/blog3/">http://example.com/2022/05/12/blog3/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E9%98%B2%E6%8A%A4/">防护</a><a class="post-meta__tags" href="/tags/%E5%8A%A0%E5%9B%BA/">加固</a></div><div class="post-qr-code"><div class="post-qr-code-item"><img class="post-qr-code__img" src="https://s3.bmp.ovh/imgs/2022/05/11/38d5da64d837398d.jpeg"><div class="post-qr-code__desc">知识星球</div></div><div class="post-qr-code-item"><img class="post-qr-code__img" src="https://s3.bmp.ovh/imgs/2022/05/11/db426e08dc9e0f55.jpeg"><div class="post-qr-code__desc">微信好友</div></div></div><nav id="pagination"><div class="next-post pull-right"><a href="/2022/05/11/blog2/"><span>小米手机—Redmi K20 Pro刷Magisk、Xposed等环境</span><i class="fa fa-chevron-right"></i></a></div></nav></div></div><footer class="footer-bg" style="background-image: url(https://pic.3gbizhi.com/2021/1208/thumb_1680_0_20211208022357673.png)"><div class="layout" id="footer"><div class="copyright">&copy;2013 - 2022 By Andy</div><div class="framework-info"><span>Driven - </span><a target="_blank" rel="noopener" href="http://hexo.io"><span>Hexo</span></a><span class="footer-separator">|</span><span>Theme - </span><a target="_blank" rel="noopener" href="https://github.com/Molunerfinn/hexo-theme-melody"><span>Melody</span></a></div><div class="footer_custom_text">盛年不重来，一日难再晨。及时宜自勉，岁月不待人。</div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_page_pv"><i class="fa fa-file"></i><span id="busuanzi_value_page_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/js/utils.js?version=1.9.0"></script><script src="/js/fancybox.js?version=1.9.0"></script><script src="/js/sidebar.js?version=1.9.0"></script><script src="/js/copy.js?version=1.9.0"></script><script src="/js/fireworks.js?version=1.9.0"></script><script src="/js/transition.js?version=1.9.0"></script><script src="/js/scroll.js?version=1.9.0"></script><script src="/js/head.js?version=1.9.0"></script><script>if(/Android|webOS|iPhone|iPod|iPad|BlackBerry/i.test(navigator.userAgent)) {
   $('#nav').addClass('is-mobile')
