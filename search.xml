@@ -30,46 +30,6 @@
       </tags>
   </entry>
   <entry>
-    <title>小米手机—Redmi K20 Pro刷Magisk、Xposed等环境</title>
-    <url>/2022/05/11/blog2/</url>
-    <content><![CDATA[<h3 id="手机解锁BL"><a href="#手机解锁BL" class="headerlink" title="手机解锁BL"></a>手机解锁BL</h3><p>1、我们到指定网站<a href="http://www.miui.com/unlock/download.html">http://www.miui.com/unlock/download.html</a> 下载解锁工具，得到解锁工具包后解压双击运行miflash_unlock.exe，登录自己账号。<br><img src="/2022/05/11/blog2/1.png"></p>
-<p>2、手机关机状态下长按手机的“音量减键+电源键”，进入手机FASTBOOT模式（有个兔子的界面就是），然后数据线插入手机和电脑连接，如下显示已连接手机后，我们点击解锁即可等待解锁。<br><img src="/2022/05/11/blog2/2.png"><br><img src="/2022/05/11/blog2/3.png"></p>
-<h3 id="刷入Magisk"><a href="#刷入Magisk" class="headerlink" title="刷入Magisk"></a>刷入Magisk</h3><p>高版本的Magisk可以通过卡刷和直接安装，本次我们按照<a href="https://topjohnwu.github.io/Magisk/install.html#samsung-system-as-root">官网介绍</a>来安装</p>
-<p>1、首先我们要下载对应的系统镜像，因为我们需要boot.img文件，小米手机可到<a href="https://xiaomirom.com/">下载 小米ROM</a>下载，找到自己机型对应的系统版本即可，要和手机系统版本号一致。下载后需要解压提取其中boot.img文件，将文件push到我们的手机（adb push）。<br><img src="/2022/05/11/blog2/4.png"></p>
-<p>2、我们还需要去<a href="https://github.com/topjohnwu/Magisk">Magisk github</a>下载安装文件。<br><img src="/2022/05/11/blog2/5.png"></p>
-<p>3、将我们下载的Magisk安装包安装后打开，下图是我们已经安装好的Magisk，我们点击安装——下一步——选择并修补一个文件——选择我们要push到手机的boot.img文件即可<br><img src="/2022/05/11/blog2/6.png" width="50%"></p>
-<img src="/2022/05/11/blog2/7.png" width="50%">
-
-<img src="/2022/05/11/blog2/8.png" width="50%">
-
-<img src="/2022/05/11/blog2/9.png" width="50%">
-
-<p>4、接着上步，会生成一个magisk_patched_random_strings.img文件，我们将该文件copy到自己电脑即可（adb pull）<br><img src="/2022/05/11/blog2/10.png" width="50%"></p>
-<p>5、接下来我们将copy到电脑的magisk_patched_random_strings.img文件重新刷入手机即可（还是boot分区）,最后重启即可。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">fastboot flash boot magisk_patched_random_strings.img</span><br><span class="line">fastboot reboot</span><br></pre></td></tr></table></figure>
-
-<h3 id="其他工具环境"><a href="#其他工具环境" class="headerlink" title="其他工具环境"></a>其他工具环境</h3><h4 id="LSPosed和Root-hide"><a href="#LSPosed和Root-hide" class="headerlink" title="LSPosed和Root hide"></a>LSPosed和Root hide</h4><p>我安装的是最新版的Magisk（V24），废除了之前的Riru,采用Zygisk替代<br><img src="/2022/05/11/blog2/11.png" width="50%"><br>我们打开后就可以下载对应的模块达到对应的目的，这个版本模块无法在Magisk里面下载更新，只能自己下载zip包本地安装，主要有几个</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Zygisk-LSPosed——替代之前的LSPosed、riru-edxposed</span><br><span class="line">Shamiko（可以和frida共存）——替代之前的riru-momohide、hide</span><br></pre></td></tr></table></figure>
-<img src="/2022/05/11/blog2/12.png" width="50%">
-
-<h4 id="Momo"><a href="#Momo" class="headerlink" title="Momo"></a>Momo</h4><p>这个工具主要就是检测我们手机都有哪些风险环境<br><img src="/2022/05/11/blog2/13.png" width="50%"></p>
-<h3 id="Frida"><a href="#Frida" class="headerlink" title="Frida"></a>Frida</h3><p>这个不用过多介绍，直接官网下载push到手机，提权即可使用，(当然Magisk里面也有对应的插件)如果被检测，可以试试<code>strong-frida</code>，这里就不过多介绍了。</p>
-<h3 id="安装burp证书"><a href="#安装burp证书" class="headerlink" title="安装burp证书"></a>安装burp证书</h3><p><img src="/2022/05/11/blog2/14.png"><br><img src="/2022/05/11/blog2/15.png"><br>导出的.crt文件push到手机上<br>我们在小米手机设置也搜索证书，选择要安装的证书安装，这样安装后应该在用户凭据下，我们需要把它移到系统凭据下，这时候就需要借助<code>Magisk</code>的<code>Move_Certificates</code>模块<br><img src="/2022/05/11/blog2/16.png" width="50%"><br><img src="/2022/05/11/blog2/17.png" width="50%"><br>我们找到<a href="https://github.com/Magisk-Modules-Repo/movecert"><code>Move_Certificates</code></a>模块安装后重启手机即可<br>重启手机后我们在设置里面搜索信任的凭证，可以看到我们的证书已经在系统凭据下了。<br><img src="/2022/05/11/blog2/18.png" width="50%"></p>
-<p>这样我们就可以正常抓包了，但是对于有证书校验的客户端，我们还是需要配合<code>JustMePlush</code>、<a href="https://github.com/Fuzion24/JustTrustMe"><code>JustTrustMe</code></a>、<a href="https://github.com/ac-pm/SSLUnpinning_Xposed"><code>SSLUnpinning</code></a>等hook工具</p>
-]]></content>
-      <categories>
-        <category>刷机</category>
-        <category>逆向环境</category>
-      </categories>
-      <tags>
-        <tag>刷机</tag>
-        <tag>小米</tag>
-        <tag>Magisk</tag>
-        <tag>Xposed</tag>
-        <tag>burp证书</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Android加固little总结</title>
     <url>/2022/05/12/blog3/</url>
     <content><![CDATA[<h1 id="Android软件加固"><a href="#Android软件加固" class="headerlink" title="Android软件加固"></a>Android软件加固</h1><h2 id="Android软件加固概述"><a href="#Android软件加固概述" class="headerlink" title="Android软件加固概述"></a>Android软件加固概述</h2><p>从2012年开始，移动互联网进入快速发展阶段，Android App开发热潮的兴起，也推动了Android平台软件保护技术的发展。</p>
@@ -184,6 +144,46 @@
       <tags>
         <tag>防护</tag>
         <tag>加固</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>小米手机—Redmi K20 Pro刷Magisk、Xposed等环境</title>
+    <url>/2022/05/11/blog2/</url>
+    <content><![CDATA[<h3 id="手机解锁BL"><a href="#手机解锁BL" class="headerlink" title="手机解锁BL"></a>手机解锁BL</h3><p>1、我们到指定网站<a href="http://www.miui.com/unlock/download.html">http://www.miui.com/unlock/download.html</a> 下载解锁工具，得到解锁工具包后解压双击运行miflash_unlock.exe，登录自己账号。<br><img src="/2022/05/11/blog2/1.png"></p>
+<p>2、手机关机状态下长按手机的“音量减键+电源键”，进入手机FASTBOOT模式（有个兔子的界面就是），然后数据线插入手机和电脑连接，如下显示已连接手机后，我们点击解锁即可等待解锁。<br><img src="/2022/05/11/blog2/2.png"><br><img src="/2022/05/11/blog2/3.png"></p>
+<h3 id="刷入Magisk"><a href="#刷入Magisk" class="headerlink" title="刷入Magisk"></a>刷入Magisk</h3><p>高版本的Magisk可以通过卡刷和直接安装，本次我们按照<a href="https://topjohnwu.github.io/Magisk/install.html#samsung-system-as-root">官网介绍</a>来安装</p>
+<p>1、首先我们要下载对应的系统镜像，因为我们需要boot.img文件，小米手机可到<a href="https://xiaomirom.com/">下载 小米ROM</a>下载，找到自己机型对应的系统版本即可，要和手机系统版本号一致。下载后需要解压提取其中boot.img文件，将文件push到我们的手机（adb push）。<br><img src="/2022/05/11/blog2/4.png"></p>
+<p>2、我们还需要去<a href="https://github.com/topjohnwu/Magisk">Magisk github</a>下载安装文件。<br><img src="/2022/05/11/blog2/5.png"></p>
+<p>3、将我们下载的Magisk安装包安装后打开，下图是我们已经安装好的Magisk，我们点击安装——下一步——选择并修补一个文件——选择我们要push到手机的boot.img文件即可<br><img src="/2022/05/11/blog2/6.png" width="50%"></p>
+<img src="/2022/05/11/blog2/7.png" width="50%">
+
+<img src="/2022/05/11/blog2/8.png" width="50%">
+
+<img src="/2022/05/11/blog2/9.png" width="50%">
+
+<p>4、接着上步，会生成一个magisk_patched_random_strings.img文件，我们将该文件copy到自己电脑即可（adb pull）<br><img src="/2022/05/11/blog2/10.png" width="50%"></p>
+<p>5、接下来我们将copy到电脑的magisk_patched_random_strings.img文件重新刷入手机即可（还是boot分区）,最后重启即可。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">fastboot flash boot magisk_patched_random_strings.img</span><br><span class="line">fastboot reboot</span><br></pre></td></tr></table></figure>
+
+<h3 id="其他工具环境"><a href="#其他工具环境" class="headerlink" title="其他工具环境"></a>其他工具环境</h3><h4 id="LSPosed和Root-hide"><a href="#LSPosed和Root-hide" class="headerlink" title="LSPosed和Root hide"></a>LSPosed和Root hide</h4><p>我安装的是最新版的Magisk（V24），废除了之前的Riru,采用Zygisk替代<br><img src="/2022/05/11/blog2/11.png" width="50%"><br>我们打开后就可以下载对应的模块达到对应的目的，这个版本模块无法在Magisk里面下载更新，只能自己下载zip包本地安装，主要有几个</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Zygisk-LSPosed——替代之前的LSPosed、riru-edxposed</span><br><span class="line">Shamiko（可以和frida共存）——替代之前的riru-momohide、hide</span><br></pre></td></tr></table></figure>
+<img src="/2022/05/11/blog2/12.png" width="50%">
+
+<h4 id="Momo"><a href="#Momo" class="headerlink" title="Momo"></a>Momo</h4><p>这个工具主要就是检测我们手机都有哪些风险环境<br><img src="/2022/05/11/blog2/13.png" width="50%"></p>
+<h3 id="Frida"><a href="#Frida" class="headerlink" title="Frida"></a>Frida</h3><p>这个不用过多介绍，直接官网下载push到手机，提权即可使用，(当然Magisk里面也有对应的插件)如果被检测，可以试试<code>strong-frida</code>，这里就不过多介绍了。</p>
+<h3 id="安装burp证书"><a href="#安装burp证书" class="headerlink" title="安装burp证书"></a>安装burp证书</h3><p><img src="/2022/05/11/blog2/14.png"><br><img src="/2022/05/11/blog2/15.png"><br>导出的.crt文件push到手机上<br>我们在小米手机设置也搜索证书，选择要安装的证书安装，这样安装后应该在用户凭据下，我们需要把它移到系统凭据下，这时候就需要借助<code>Magisk</code>的<code>Move_Certificates</code>模块<br><img src="/2022/05/11/blog2/16.png" width="50%"><br><img src="/2022/05/11/blog2/17.png" width="50%"><br>我们找到<a href="https://github.com/Magisk-Modules-Repo/movecert"><code>Move_Certificates</code></a>模块安装后重启手机即可<br>重启手机后我们在设置里面搜索信任的凭证，可以看到我们的证书已经在系统凭据下了。<br><img src="/2022/05/11/blog2/18.png" width="50%"></p>
+<p>这样我们就可以正常抓包了，但是对于有证书校验的客户端，我们还是需要配合<code>JustMePlush</code>、<a href="https://github.com/Fuzion24/JustTrustMe"><code>JustTrustMe</code></a>、<a href="https://github.com/ac-pm/SSLUnpinning_Xposed"><code>SSLUnpinning</code></a>等hook工具</p>
+]]></content>
+      <categories>
+        <category>刷机</category>
+        <category>逆向环境</category>
+      </categories>
+      <tags>
+        <tag>刷机</tag>
+        <tag>小米</tag>
+        <tag>Magisk</tag>
+        <tag>Xposed</tag>
+        <tag>burp证书</tag>
       </tags>
   </entry>
   <entry>
