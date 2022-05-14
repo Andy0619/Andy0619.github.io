@@ -1,6 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>MAC环境变量配置的坑</title>
+    <url>/2022/05/14/MAC%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E9%85%8D%E7%BD%AE%E7%9A%84%E5%9D%91/</url>
+    <content><![CDATA[<p>我们在使用Mac，配置环境变量时或多或少都遇到了配置环境变量的坑，我们会遇到刚配置的环境变量，重新打开终端后环境变量就不能使用了，也遇到了配置的环境变量只有在su下才能使用的情况。这都是什么原因呢？？？</p>
+<p>从 macOS Catalina 版开始，您的 Mac 将使用 zsh 作为默认登录 Shell 和交互式 Shell。您还可以在较低版本的 macOS 中将 zsh 设置为默认 Shell。</p>
+<p><strong>bash</strong> 是 macOS Mojave 及更低版本中的默认 Shell。</p>
+<p>各个环境变量文件关系详见[[Mac环境零散知识点]]</p>
+<h2 id="profile："><a href="#profile：" class="headerlink" title="profile："></a>profile：</h2><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">用于设置系统级别的环境变量和启动程序，在这个文件下配置会对所有的用户生效。</span><br><span class="line">这个文件的配置方法如下：</span><br><span class="line">	执行：sudo vim /etc/profile  命令</span><br><span class="line">	按 i 进入编辑模式 </span><br><span class="line">	esc 退出编辑模式</span><br><span class="line">	wq! 保存并退出  </span><br><span class="line">	<span class="built_in">source</span> /etc/profile 立即生效</span><br><span class="line">	查看环境是否配置成功： <span class="built_in">echo</span> <span class="variable">$PATH</span>（配置的环境路径名）</span><br></pre></td></tr></table></figure>
+
+<h2 id="bash-profile（针对catalina之前的系统，是bash-shell）"><a href="#bash-profile（针对catalina之前的系统，是bash-shell）" class="headerlink" title=".bash_profile（针对catalina之前的系统，是bash shell）"></a>.bash_profile（针对catalina之前的系统，是bash shell）</h2><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">只对单一用户生效，该文件是一个用户级别的设置，可以理解为某一用户下的profile</span><br><span class="line">（一般我们配置环境变量在该文件下配置即可）</span><br><span class="line">配置方式如下：</span><br><span class="line">    如果不存在.bash_profile 文件：执行<span class="built_in">touch</span> .bash_profile</span><br><span class="line">    如果已经存在：执行open .bash_profile  打开bash_profile文件编辑保存 </span><br><span class="line">    立即生效执行： <span class="built_in">source</span> ~/.bash_profile</span><br><span class="line">    查看是否配置成功：<span class="built_in">echo</span> <span class="variable">$PATH</span>（配置的环境路径名）</span><br></pre></td></tr></table></figure>
+<p><img src="/2022/05/14/MAC%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E9%85%8D%E7%BD%AE%E7%9A%84%E5%9D%91/1.png"></p>
+<h2 id="zshrc（针对zsh-shell）"><a href="#zshrc（针对zsh-shell）" class="headerlink" title=".zshrc（针对zsh shell）"></a>.zshrc（针对zsh shell）</h2><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">配置方式如下：</span><br><span class="line">    如果不存在.zshrc 文件：可能是我们没有安装oh-my-zsh，安装之后则在对应用户目录下</span><br><span class="line">    如果已经存在：执行open .zshrc  打开zshrc文件编辑保存 </span><br><span class="line">    立即生效执行： <span class="built_in">source</span> ~/.zshrc</span><br><span class="line">    查看是否配置成功：<span class="built_in">echo</span> <span class="variable">$PATH</span>（配置的环境路径名）</span><br></pre></td></tr></table></figure>
+<p><img src="/2022/05/14/MAC%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E9%85%8D%E7%BD%AE%E7%9A%84%E5%9D%91/2.png"></p>
+<p>更改shell类型如下图：<br><img src="/2022/05/14/MAC%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E9%85%8D%E7%BD%AE%E7%9A%84%E5%9D%91/3.png"></p>
+]]></content>
+      <categories>
+        <category>环境变量配置</category>
+      </categories>
+      <tags>
+        <tag>MAC</tag>
+        <tag>环境变量</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>某病毒APP防护破解</title>
     <url>/2022/05/11/blog1/</url>
     <content><![CDATA[<p>今天星友求助一个类似杀猪盘的样本。该样本有以下几个点需要攻克：</p>
@@ -542,6 +565,24 @@
         <tag>frida</tag>
         <tag>objection</tag>
         <tag>Wallbreaker</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>重放攻击防御手段</title>
+    <url>/2022/05/14/%E9%87%8D%E6%94%BE%E6%94%BB%E5%87%BB%E9%98%B2%E5%BE%A1%E6%89%8B%E6%AE%B5/</url>
+    <content><![CDATA[<h2 id="重放攻击"><a href="#重放攻击" class="headerlink" title="重放攻击"></a>重放攻击</h2><p>入侵者从网络上截取主机A发送给主机B的报文，并把由A加密的报文发送给B，使主机B误以为入侵者就是主机A，然后主机B向伪装成A的入侵者发送应当发送给A的报文。</p>
+<h3 id="防御手段"><a href="#防御手段" class="headerlink" title="防御手段"></a>防御手段</h3><p>防止重放攻击的方法是使用不重数</p>
+<h4 id="1-加随机数"><a href="#1-加随机数" class="headerlink" title="1. 加随机数"></a>1. 加随机数</h4><p>该方法优点是认证双方不需要时间同步，双方记住使用过的随机数，如发现报文中有以前使用过的随机数，就认为是重放攻击。缺点是需要额外保存使用过的随机数，若记录的时间段较长，则保存和查询的开销较大。</p>
+<h4 id="2-加时间戳"><a href="#2-加时间戳" class="headerlink" title="2. 加时间戳"></a>2. 加时间戳</h4><p>该方法优点是不用额外保存其他信息。缺点是认证双方需要准确的时间同步，同步越好，受攻击的可能性就越小。但当系统很庞大，跨越的区域较广时，要做到精确的时间同步并不是很容易。</p>
+<h4 id="3-加流水号"><a href="#3-加流水号" class="headerlink" title="3. 加流水号"></a>3. 加流水号</h4><p>就是双方在报文中添加一个逐步递增的整数，只要接收到一个不连续的流水号报文(太大或太小)，就认定有重放威胁。该方法优点是不需要时间同步，保存的信息量比随机数方式小。缺点是一旦攻击者对报文解密成功，就可以获得流水号，从而每次将流水号递增欺骗认证端。</p>
+<p>在实际中，常将方法(1)和方法(2)组合使用，这样就只需保存某个很短时间段内的所有随机数，而且时间戳的同步也不需要太精确（最通常的做法是利用时间戳+随机数字生成随机码,并入交互报文中即可）。<br>对付重放攻击除了使用本以上方法外，还可以使用挑战一应答机制和一次性口令机制，而且似乎后面两种方法在实际中使用得更广泛。</p>
+]]></content>
+      <categories>
+        <category>web防御手段</category>
+      </categories>
+      <tags>
+        <tag>重放攻击</tag>
+        <tag>防御手段</tag>
       </tags>
   </entry>
 </search>
