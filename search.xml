@@ -210,6 +210,175 @@
       </tags>
   </entry>
   <entry>
+    <title>objection+ Wallbreaker基本使用</title>
+    <url>/2022/05/13/blog5/</url>
+    <content><![CDATA[<h1 id="objection-Wallbreaker基本使用"><a href="#objection-Wallbreaker基本使用" class="headerlink" title="objection+ Wallbreaker基本使用"></a>objection+ Wallbreaker基本使用</h1><table>
+<thead>
+<tr>
+<th>objection 框架</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>objection -g cn.com.ccccaa.ui explore</td>
+<td>objection注入指定应用</td>
+</tr>
+<tr>
+<td>android sslpinning disable</td>
+<td>过ssl证书认证</td>
+</tr>
+<tr>
+<td>android root disable</td>
+<td></td>
+</tr>
+<tr>
+<td>android hooking list activities</td>
+<td>查找所有可用activities</td>
+</tr>
+<tr>
+<td>android intent launch_activity 类名</td>
+<td>启动指定的类</td>
+</tr>
+<tr>
+<td>android intent launch_service 类名</td>
+<td>启动指定服务</td>
+</tr>
+<tr>
+<td>android hooking generate simple 类名</td>
+<td>查指定类下面有哪些方法</td>
+</tr>
+<tr>
+<td>android hooking list class_methods 类</td>
+<td>列出类的所有方法</td>
+</tr>
+<tr>
+<td>android hooking watch class 类名</td>
+<td>监视进行某个操作的时候调用了哪些方法（hook类的所有方法）</td>
+</tr>
+<tr>
+<td>objection -g com.hd.zhibo explore –startup-command “android hooking watch class_method android.app.AlertDialog.onCreate –dump-args –dump-backtrace –dump-return”</td>
+<td>hook方法的参数、返回值和调用栈，这种实现方式是启动的时候就hook</td>
+</tr>
+<tr>
+<td>android hooking watch class_method android.app.AlertDialog.onCreate –dump-args –dump-return –dump-backtrace</td>
+<td>具体方法调用之前hook</td>
+</tr>
+<tr>
+<td>env</td>
+<td>应用环境信息</td>
+</tr>
+<tr>
+<td>ls</td>
+<td></td>
+</tr>
+<tr>
+<td>jobs list</td>
+<td>创建的Hooks列表</td>
+</tr>
+<tr>
+<td>jobs kill id</td>
+<td></td>
+</tr>
+<tr>
+<td>memory list modules</td>
+<td>查看内存中加载的库</td>
+</tr>
+<tr>
+<td>memory list exports libssl.so</td>
+<td>查看库的导出函数</td>
+</tr>
+<tr>
+<td>memory dump all from_base</td>
+<td>提取整个(或部分)内存</td>
+</tr>
+<tr>
+<td>memory dump from_base 0xc935628c 100 memory.dex</td>
+<td></td>
+</tr>
+<tr>
+<td>memory search “64 65 78 0a 30 33 35 00”</td>
+<td>暴力搜内存</td>
+</tr>
+<tr>
+<td>memory search “aiyou,bucuoo” –string</td>
+<td>搜索整个内存</td>
+</tr>
+<tr>
+<td>memory search “aiyou,bucuoo” –string –offsets-only</td>
+<td>仅看偏移地址</td>
+</tr>
+<tr>
+<td>android hooking list services</td>
+<td>查看可供开启的服务</td>
+</tr>
+<tr>
+<td>android intent launch_service [完整Service名]</td>
+<td>直接启动指定service</td>
+</tr>
+<tr>
+<td>android hooking list classes</td>
+<td>列出内存中所有的类</td>
+</tr>
+<tr>
+<td>android hooking search classes [display]</td>
+<td>在内存中所有已加载的类中搜索包含特定关键词的类</td>
+</tr>
+<tr>
+<td>android hooking search methods [display]</td>
+<td>在内存中所有已加载的类的方法中搜索包含特定关键词的类</td>
+</tr>
+<tr>
+<td>cat .objection/objection.log</td>
+<td>日志查看</td>
+</tr>
+<tr>
+<td>cat objection.log ｜grep -i http</td>
+<td>日志筛选</td>
+</tr>
+<tr>
+<td>objection -g com.android.settings explore -c “2.txt”</td>
+<td>运行批量hook</td>
+</tr>
+<tr>
+<td>Wallbreaker</td>
+<td></td>
+</tr>
+<tr>
+<td>objection -g com.android.phone explore -P ~/.objection/plugins</td>
+<td>使用Wallbreaker</td>
+</tr>
+<tr>
+<td>plugin wallbreaker classsearch <pattern></pattern></td>
+<td>搜索类，根据给的 pattern 对所有类名进行匹配，列出匹配到的所有类名</td>
+</tr>
+<tr>
+<td>plugin wallbreaker objectsearch <classname></classname></td>
+<td>搜索对象，根据类名搜索内存中已经被创建的实例，列出 handle 和 toString() 的结果。</td>
+</tr>
+<tr>
+<td>plugin wallbreaker classdump <classname> [–fullname]</classname></td>
+<td>ClassDump，输出类的结构， 若加了 –fullname 参数，打印的数据中类名会带着完整的包名。</td>
+</tr>
+<tr>
+<td>plugin wallbreaker objectdump <handle> [–fullname]</handle></td>
+<td>ObjectDump，在 ClassDump 的基础上，输出指定对象中的每个字段的数据。</td>
+</tr>
+</tbody></table>
+<p><img src="/2022/05/13/blog5/1.png"></p>
+<p><img src="/2022/05/13/blog5/2.png"></p>
+<p><img src="/2022/05/13/blog5/3.png"></p>
+<p><img src="/2022/05/13/blog5/4.png"></p>
+]]></content>
+      <categories>
+        <category>Android攻击手段</category>
+      </categories>
+      <tags>
+        <tag>frida</tag>
+        <tag>objection</tag>
+        <tag>Wallbreaker</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>hexo&amp;github 搭建属于自己的博客</title>
     <url>/2022/05/12/blog4/</url>
     <content><![CDATA[<h2 id="安装-Hexo"><a href="#安装-Hexo" class="headerlink" title="安装 Hexo"></a>安装 Hexo</h2><ol>
@@ -396,175 +565,6 @@
         <tag>博客搭建</tag>
         <tag>hexo</tag>
         <tag>github</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>objection+ Wallbreaker基本使用</title>
-    <url>/2022/05/13/blog5/</url>
-    <content><![CDATA[<h1 id="objection-Wallbreaker基本使用"><a href="#objection-Wallbreaker基本使用" class="headerlink" title="objection+ Wallbreaker基本使用"></a>objection+ Wallbreaker基本使用</h1><table>
-<thead>
-<tr>
-<th>objection 框架</th>
-<th>解释</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>objection -g cn.com.ccccaa.ui explore</td>
-<td>objection注入指定应用</td>
-</tr>
-<tr>
-<td>android sslpinning disable</td>
-<td>过ssl证书认证</td>
-</tr>
-<tr>
-<td>android root disable</td>
-<td></td>
-</tr>
-<tr>
-<td>android hooking list activities</td>
-<td>查找所有可用activities</td>
-</tr>
-<tr>
-<td>android intent launch_activity 类名</td>
-<td>启动指定的类</td>
-</tr>
-<tr>
-<td>android intent launch_service 类名</td>
-<td>启动指定服务</td>
-</tr>
-<tr>
-<td>android hooking generate simple 类名</td>
-<td>查指定类下面有哪些方法</td>
-</tr>
-<tr>
-<td>android hooking list class_methods 类</td>
-<td>列出类的所有方法</td>
-</tr>
-<tr>
-<td>android hooking watch class 类名</td>
-<td>监视进行某个操作的时候调用了哪些方法（hook类的所有方法）</td>
-</tr>
-<tr>
-<td>objection -g com.hd.zhibo explore –startup-command “android hooking watch class_method android.app.AlertDialog.onCreate –dump-args –dump-backtrace –dump-return”</td>
-<td>hook方法的参数、返回值和调用栈，这种实现方式是启动的时候就hook</td>
-</tr>
-<tr>
-<td>android hooking watch class_method android.app.AlertDialog.onCreate –dump-args –dump-return –dump-backtrace</td>
-<td>具体方法调用之前hook</td>
-</tr>
-<tr>
-<td>env</td>
-<td>应用环境信息</td>
-</tr>
-<tr>
-<td>ls</td>
-<td></td>
-</tr>
-<tr>
-<td>jobs list</td>
-<td>创建的Hooks列表</td>
-</tr>
-<tr>
-<td>jobs kill id</td>
-<td></td>
-</tr>
-<tr>
-<td>memory list modules</td>
-<td>查看内存中加载的库</td>
-</tr>
-<tr>
-<td>memory list exports libssl.so</td>
-<td>查看库的导出函数</td>
-</tr>
-<tr>
-<td>memory dump all from_base</td>
-<td>提取整个(或部分)内存</td>
-</tr>
-<tr>
-<td>memory dump from_base 0xc935628c 100 memory.dex</td>
-<td></td>
-</tr>
-<tr>
-<td>memory search “64 65 78 0a 30 33 35 00”</td>
-<td>暴力搜内存</td>
-</tr>
-<tr>
-<td>memory search “aiyou,bucuoo” –string</td>
-<td>搜索整个内存</td>
-</tr>
-<tr>
-<td>memory search “aiyou,bucuoo” –string –offsets-only</td>
-<td>仅看偏移地址</td>
-</tr>
-<tr>
-<td>android hooking list services</td>
-<td>查看可供开启的服务</td>
-</tr>
-<tr>
-<td>android intent launch_service [完整Service名]</td>
-<td>直接启动指定service</td>
-</tr>
-<tr>
-<td>android hooking list classes</td>
-<td>列出内存中所有的类</td>
-</tr>
-<tr>
-<td>android hooking search classes [display]</td>
-<td>在内存中所有已加载的类中搜索包含特定关键词的类</td>
-</tr>
-<tr>
-<td>android hooking search methods [display]</td>
-<td>在内存中所有已加载的类的方法中搜索包含特定关键词的类</td>
-</tr>
-<tr>
-<td>cat .objection/objection.log</td>
-<td>日志查看</td>
-</tr>
-<tr>
-<td>cat objection.log ｜grep -i http</td>
-<td>日志筛选</td>
-</tr>
-<tr>
-<td>objection -g com.android.settings explore -c “2.txt”</td>
-<td>运行批量hook</td>
-</tr>
-<tr>
-<td>Wallbreaker</td>
-<td></td>
-</tr>
-<tr>
-<td>objection -g com.android.phone explore -P ~/.objection/plugins</td>
-<td>使用Wallbreaker</td>
-</tr>
-<tr>
-<td>plugin wallbreaker classsearch <pattern></pattern></td>
-<td>搜索类，根据给的 pattern 对所有类名进行匹配，列出匹配到的所有类名</td>
-</tr>
-<tr>
-<td>plugin wallbreaker objectsearch <classname></classname></td>
-<td>搜索对象，根据类名搜索内存中已经被创建的实例，列出 handle 和 toString() 的结果。</td>
-</tr>
-<tr>
-<td>plugin wallbreaker classdump <classname> [–fullname]</classname></td>
-<td>ClassDump，输出类的结构， 若加了 –fullname 参数，打印的数据中类名会带着完整的包名。</td>
-</tr>
-<tr>
-<td>plugin wallbreaker objectdump <handle> [–fullname]</handle></td>
-<td>ObjectDump，在 ClassDump 的基础上，输出指定对象中的每个字段的数据。</td>
-</tr>
-</tbody></table>
-<p><img src="/2022/05/13/blog5/1.png"></p>
-<p><img src="/2022/05/13/blog5/2.png"></p>
-<p><img src="/2022/05/13/blog5/3.png"></p>
-<p><img src="/2022/05/13/blog5/4.png"></p>
-]]></content>
-      <categories>
-        <category>Android攻击手段</category>
-      </categories>
-      <tags>
-        <tag>frida</tag>
-        <tag>objection</tag>
-        <tag>Wallbreaker</tag>
       </tags>
   </entry>
   <entry>
