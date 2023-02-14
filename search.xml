@@ -621,6 +621,35 @@
       </tags>
   </entry>
   <entry>
+    <title>某病毒APP防护破解</title>
+    <url>/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/</url>
+    <content><![CDATA[<p>今天星友求助一个类似杀猪盘的样本。该样本有以下几个点需要攻克：</p>
+<p>1、AndroidManifest.xml经过处理：<br><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/1.png"><br>2、整个样本的字符串全部经过加密，解密方法名经过强混淆：<br><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/2.png"><br>3、资源文件也经过了混淆：<br><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/3.png"><br>4、样本伪加密：<br><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/4.png"><br>5、样本无法安装（签名问题)：<br><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/5.png"></p>
+<p>接下来我们来解决一下2、5两个问题。</p>
+<h3 id="样本无法安装"><a href="#样本无法安装" class="headerlink" title="样本无法安装"></a>样本无法安装</h3><p>我们看样本安装报错，提示签名问题，我们直接上Xposed模块:<a href="https://github.com/Xposed-Modules-Repo/com.coderstory.toolkit">核心破解</a><br>核心破解的主要功能：<br>1、允许降级安装应用<br>2、允许安装签名错误的apk<br>3、允许在使用不同签名的情况下覆盖安装<br>缺点：<br>当前版本只支持安卓10-12<br><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/6.png"></p>
+<h3 id="强混淆方法hook、字符串解密"><a href="#强混淆方法hook、字符串解密" class="headerlink" title="强混淆方法hook、字符串解密"></a>强混淆方法hook、字符串解密</h3><p><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/7.png"><br>接下来我们hook一下这个加密方法，简单的hook我们直接使用objection即可：</p>
+<p>hook 监测该类，可以看到只有这一个方法：</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line">objection -g com.<span class="property">biaoqyun</span>.<span class="property">tongchengaglao</span> explore</span><br><span class="line">android hooking watch <span class="keyword">class</span> <span class="title class_">b6p</span>.<span class="property">alur0e</span>.<span class="property">fmjoi</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/8.png"><br>我们直接复制，hook该方法，报错，找不到这个方法：<br><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/9.png"><br>这样看直接hook这个方法显然是有问题，因为其中包含了各种字符，frida在解析这个方法时由于乱码的原因，无法正常解析道这个类，这样看来我们只能想其他办法了。</p>
+<p>曲线救国，可以试试hook它的上层调用a.c，打印对应的参数和返回值来看，其中的参数即是解密后的字符串。  </p>
+<p>得到结果如下：</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line">android hooking watch class_method com.<span class="property">g</span></span><br><span class="line">aoyuan.<span class="property">mianshu</span>.<span class="property">k</span>.<span class="property">c</span>.<span class="property">a</span> --dump-args --dump-<span class="keyword">return</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/10.png"><br>从上图我们可以看到有RSA密钥，以及返回的一些URL。</p>
+<p>这样的缺点是只能知道这一块的字符串解密内容，其他的还是无法定位，这样看还是需要hook这个混淆的方法。</p>
+<p>我们的大佬提供了解决方法，可以hook混淆方法，展示一下hook到的结果：<br><img src="/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/11.png"><br>我们也可以根据打印出来的字符串在jadx中搜索对应的字符串然后继续分析代码</p>
+<p>hook代码如下：</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">perform</span>(</span><br><span class="line">    <span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line"> </span><br><span class="line">        <span class="keyword">var</span> targetClass = <span class="string">&quot;b6p.alur0e.fmjoi&quot;</span>;</span><br><span class="line"> </span><br><span class="line">        <span class="keyword">var</span> hookCls = <span class="title class_">Java</span>.<span class="title function_">use</span>(targetClass);</span><br><span class="line">        <span class="keyword">var</span> methods = hookCls.<span class="property">class</span>.<span class="title function_">getDeclaredMethods</span>();</span><br><span class="line"> </span><br><span class="line"></span><br><span class="line">        <span class="keyword">var</span> methodname = <span class="built_in">encodeURIComponent</span>(methods[<span class="number">0</span>].<span class="title function_">toString</span>().<span class="title function_">replace</span>(<span class="regexp">/^.*?\.([^\s\.\(\)]+)\(.*?$/</span>, <span class="string">&quot;$1&quot;</span>));<span class="comment">//对字符串进行js自己编码</span></span><br><span class="line"></span><br><span class="line"> </span><br><span class="line">        hookCls[<span class="built_in">decodeURIComponent</span>(methodname)]<span class="comment">//使用的时候再去解码</span></span><br><span class="line">            .<span class="property">implementation</span> = <span class="keyword">function</span> (<span class="params">x</span>) &#123;</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;参数：&quot;</span>, x);</span><br><span class="line">                <span class="keyword">var</span> result = <span class="variable language_">this</span>[<span class="built_in">decodeURIComponent</span>(methodname)](x);</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;返回值：&quot;</span>,result);</span><br><span class="line">                <span class="keyword">return</span> result;</span><br><span class="line">            &#125;</span><br><span class="line">    &#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>病毒分析</category>
+      </categories>
+      <tags>
+        <tag>病毒</tag>
+        <tag>防护</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>重放攻击防御手段</title>
     <url>/2022/05/14/%E9%87%8D%E6%94%BE%E6%94%BB%E5%87%BB%E9%98%B2%E5%BE%A1%E6%89%8B%E6%AE%B5/</url>
     <content><![CDATA[<h2 id="重放攻击"><a href="#重放攻击" class="headerlink" title="重放攻击"></a>重放攻击</h2><p>入侵者从网络上截取主机A发送给主机B的报文，并把由A加密的报文发送给B，使主机B误以为入侵者就是主机A，然后主机B向伪装成A的入侵者发送应当发送给A的报文。</p>
