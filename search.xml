@@ -53,6 +53,163 @@
       </tags>
   </entry>
   <entry>
+    <title>小米手机—Redmi K20 Pro刷Magisk、Xposed等环境</title>
+    <url>/2022/05/11/blog2/</url>
+    <content><![CDATA[<h3 id="手机解锁BL"><a href="#手机解锁BL" class="headerlink" title="手机解锁BL"></a>手机解锁BL</h3><p>1、我们到指定网站<a href="http://www.miui.com/unlock/download.html">http://www.miui.com/unlock/download.html</a> 下载解锁工具，得到解锁工具包后解压双击运行miflash_unlock.exe，登录自己账号。<br><img src="/2022/05/11/blog2/1.png"></p>
+<p>2、手机关机状态下长按手机的“音量减键+电源键”，进入手机FASTBOOT模式（有个兔子的界面就是），然后数据线插入手机和电脑连接，如下显示已连接手机后，我们点击解锁即可等待解锁。<br><img src="/2022/05/11/blog2/2.png"><br><img src="/2022/05/11/blog2/3.png"></p>
+<h3 id="刷入Magisk"><a href="#刷入Magisk" class="headerlink" title="刷入Magisk"></a>刷入Magisk</h3><p>高版本的Magisk可以通过卡刷和直接安装，本次我们按照<a href="https://topjohnwu.github.io/Magisk/install.html#samsung-system-as-root">官网介绍</a>来安装</p>
+<p>1、首先我们要下载对应的系统镜像，因为我们需要boot.img文件，小米手机可到<a href="https://xiaomirom.com/">下载 小米ROM</a>下载，找到自己机型对应的系统版本即可，要和手机系统版本号一致。下载后需要解压提取其中boot.img文件，将文件push到我们的手机（adb push）。<br><img src="/2022/05/11/blog2/4.png"></p>
+<p>2、我们还需要去<a href="https://github.com/topjohnwu/Magisk">Magisk github</a>下载安装文件。<br><img src="/2022/05/11/blog2/5.png"></p>
+<p>3、将我们下载的Magisk安装包安装后打开，下图是我们已经安装好的Magisk，我们点击安装——下一步——选择并修补一个文件——选择我们要push到手机的boot.img文件即可<br><img src="/2022/05/11/blog2/6.png" width="50%"></p>
+<img src="/2022/05/11/blog2/7.png" width="50%">
+
+<img src="/2022/05/11/blog2/8.png" width="50%">
+
+<img src="/2022/05/11/blog2/9.png" width="50%">
+
+<p>4、接着上步，会生成一个magisk_patched_random_strings.img文件，我们将该文件copy到自己电脑即可（adb pull）<br><img src="/2022/05/11/blog2/10.png" width="50%"></p>
+<p>5、接下来我们将copy到电脑的magisk_patched_random_strings.img文件重新刷入手机即可（还是boot分区）,最后重启即可。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">fastboot flash boot magisk_patched_random_strings.img</span><br><span class="line">fastboot reboot</span><br></pre></td></tr></table></figure>
+
+<h3 id="其他工具环境"><a href="#其他工具环境" class="headerlink" title="其他工具环境"></a>其他工具环境</h3><h4 id="LSPosed和Root-hide"><a href="#LSPosed和Root-hide" class="headerlink" title="LSPosed和Root hide"></a>LSPosed和Root hide</h4><p>我安装的是最新版的Magisk（V24），废除了之前的Riru,采用Zygisk替代<br><img src="/2022/05/11/blog2/11.png" width="50%"><br>我们打开后就可以下载对应的模块达到对应的目的，这个版本模块无法在Magisk里面下载更新，只能自己下载zip包本地安装，主要有几个</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Zygisk-LSPosed——替代之前的LSPosed、riru-edxposed</span><br><span class="line">Shamiko（可以和frida共存）——替代之前的riru-momohide、hide</span><br></pre></td></tr></table></figure>
+<img src="/2022/05/11/blog2/12.png" width="50%">
+
+<h4 id="Momo"><a href="#Momo" class="headerlink" title="Momo"></a>Momo</h4><p>这个工具主要就是检测我们手机都有哪些风险环境<br><img src="/2022/05/11/blog2/13.png" width="50%"></p>
+<h3 id="Frida"><a href="#Frida" class="headerlink" title="Frida"></a>Frida</h3><p>这个不用过多介绍，直接官网下载push到手机，提权即可使用，(当然Magisk里面也有对应的插件)如果被检测，可以试试<code>strong-frida</code>，这里就不过多介绍了。</p>
+<h3 id="安装burp证书"><a href="#安装burp证书" class="headerlink" title="安装burp证书"></a>安装burp证书</h3><p><img src="/2022/05/11/blog2/14.png"><br><img src="/2022/05/11/blog2/15.png"><br>导出的.crt文件push到手机上<br>我们在小米手机设置也搜索证书，选择要安装的证书安装，这样安装后应该在用户凭据下，我们需要把它移到系统凭据下，这时候就需要借助<code>Magisk</code>的<code>Move_Certificates</code>模块<br><img src="/2022/05/11/blog2/16.png" width="50%"><br><img src="/2022/05/11/blog2/17.png" width="50%"><br>我们找到<a href="https://github.com/Magisk-Modules-Repo/movecert"><code>Move_Certificates</code></a>模块安装后重启手机即可<br>重启手机后我们在设置里面搜索信任的凭证，可以看到我们的证书已经在系统凭据下了。<br><img src="/2022/05/11/blog2/18.png" width="50%"></p>
+<p>这样我们就可以正常抓包了，但是对于有证书校验的客户端，我们还是需要配合<code>JustMePlush</code>、<a href="https://github.com/Fuzion24/JustTrustMe"><code>JustTrustMe</code></a>、<a href="https://github.com/ac-pm/SSLUnpinning_Xposed"><code>SSLUnpinning</code></a>等hook工具</p>
+]]></content>
+      <categories>
+        <category>刷机</category>
+        <category>逆向环境</category>
+      </categories>
+      <tags>
+        <tag>刷机</tag>
+        <tag>小米</tag>
+        <tag>Magisk</tag>
+        <tag>Xposed</tag>
+        <tag>burp证书</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Android加固little总结</title>
+    <url>/2022/05/12/blog3/</url>
+    <content><![CDATA[<h1 id="Android软件加固"><a href="#Android软件加固" class="headerlink" title="Android软件加固"></a>Android软件加固</h1><h2 id="Android软件加固概述"><a href="#Android软件加固概述" class="headerlink" title="Android软件加固概述"></a>Android软件加固概述</h2><p>从2012年开始，移动互联网进入快速发展阶段，Android App开发热潮的兴起，也推动了Android平台软件保护技术的发展。</p>
+<ul>
+<li>  <strong>为何做加固</strong>   </li>
+</ul>
+<ol>
+<li> 保护核心代码  </li>
+<li> 防止营销作弊的手段   </li>
+<li> 防止代码被篡改 …</li>
+</ol>
+<h2 id="加固代际"><a href="#加固代际" class="headerlink" title="加固代际"></a>加固代际</h2><p>根据不同的理解，现在加固代际基本上可以按照五代或者三代去区分。</p>
+<h3 id="第一代：动态加载类"><a href="#第一代：动态加载类" class="headerlink" title="第一代：动态加载类"></a>第一代：动态加载类</h3><p>Apk中没有完整原始的Dex，需要运行时动态的加载到内存中</p>
+<h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><ul>
+<li><p>  落地加载<br>我们拿到需要加密的Apk和自己的壳程序Apk，然后用加密算法对源Apk进行加密再将壳Apk进行合并得到新的Dex文件，最后替换壳程序中的dex文件即可，得到新的Apk,那么这个新的Apk我们也叫作脱壳程序Apk.他已经不是一个完整意义上的Apk程序了，他的主要工作是：负责解密源Apk.然后加载Apk,让其正常运行起来。运行时首先将我们的Dex文件或者Apk文件解密，然后利用DexClassLoader加载器将其加载进内存中，然后利用反射加载待加固的Apk的Appkication，然后运行待加固程序即可。<br><img src="/2022/05/12/blog3/1.png"><br><img src="/2022/05/12/blog3/2.png"></p>
+</li>
+<li><p>  不落地加载<br>落地加载将Dex文件解密出来会保存到文件中，再通过DexClassLoader加载进内存中，而不落地加载直接重写DexClassLoader使其可以直接加载字节数组，避免写入文件中。我们要做的是重写DexClassLoader，而这涉及到三个函数defineClass、findClass、loadClass，在一个类被加载的时候，会先后调用这三个函数加载一个类，所以我们需要重写这三个函数。系统的DexClassLoader加载Dex进入内存的也必然是通过字节加载的，而在系统so中的libdvm.so中的openDexFile可以直接加载Dex文件，那么现在清楚了，我们可以通过编写so文件调用openDexFile函数加载Dex字节数组，值得注意的是，openDexFile函数返回值为一个int类型的cookie，可以简单理解成一个dex文件的’身份码’，通过该’身份码’即可操控这个dex文件,至于怎么调用该函数，可以通过dlopen和dlsym函数调用。</p>
+</li>
+</ul>
+<p><img src="/2022/05/12/blog3/3.png"></p>
+<h4 id="优劣"><a href="#优劣" class="headerlink" title="优劣"></a>优劣</h4><ul>
+<li><p>  优点<br>比较容易实现，无明显的兼容性问题 能有效对抗静态分析和二次打包</p>
+</li>
+<li><p>  缺点<br>启动时需要进行大量的解密运算，容易造成卡死的情况 在内存中的数据为完整的Dex，通过动态调试Dump内存即可获取完整的Dex</p>
+</li>
+</ul>
+<h4 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/4.png"><br>Dex字符串加密 资源加密 对抗反编译 对抗调试 Dex动态加载 so加密</p>
+<h3 id="第二代：函数抽取类"><a href="#第二代：函数抽取类" class="headerlink" title="第二代：函数抽取类"></a>第二代：函数抽取类</h3><h4 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h4><p>主要分为两个步骤指令抽取和指令还原</p>
+<ul>
+<li>  指令抽取<br>解析原始Dex文件格式，保存所有方法的代码结构体信息，通过传入需要置空指令的方法和类名，检索到其代码结构体信息。通过方法的代码结构体信息获取指令个数和偏移地址，构造空指令集，然后覆盖原始指令，重新计算dex文件的checksum和signature信息，回写到头部信息中。</li>
+</ul>
+<p><img src="/2022/05/12/blog3/5.png"></p>
+<p><img src="/2022/05/12/blog3/6.png"></p>
+<ul>
+<li>  指令还原<br>native层hook系统函数dexFindClass，获取类结构体信息（dexFindClass函数用于查找类的DexClassDef结构），获取类中所有的方法信息，通过指定方法名进行过滤，获取该方法的代码结构体信息，获取该方法被抽取的指令集，修改方法对应的内存地址为可读属性，直接进行指令还原。</li>
+</ul>
+<h4 id="优劣-1"><a href="#优劣-1" class="headerlink" title="优劣"></a>优劣</h4><ul>
+<li><p>  优点<br>加密粒度变小，加密技术从Dex文件级变为方法级 按需解密，解密操作延迟到某类方法被执行前，如果方法不被执行，则不被解密 解密后的代码在内存不连续，克服了内存被Dump的缺点，有效保护了移动客户端的Java代码</p>
+</li>
+<li><p>  缺点<br>使用大量的虚拟机内部结构，会出现兼容性问题，无法保护所有方法 无法对抗自定义虚拟机 它跟虚拟机的JIT优化出现冲突，达不到最佳的性能表现</p>
+</li>
+</ul>
+<h4 id="特点-1"><a href="#特点-1" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/7.png"></p>
+<p>除一代有的特点外 内存中无完整、连续的Dex so代码混淆、膨胀</p>
+<h3 id="第三代：VMP、Dex2C类"><a href="#第三代：VMP、Dex2C类" class="headerlink" title="第三代：VMP、Dex2C类"></a>第三代：VMP、Dex2C类</h3><h4 id="原理-2"><a href="#原理-2" class="headerlink" title="原理"></a>原理</h4><ul>
+<li>  VMP<br>执行到关键代码时进入壳so执行，关于这一点，不同的厂商有着不同的做法，比如把关键函数变成native函数，在壳so中动态或者静态注册</li>
+</ul>
+<p><img src="/2022/05/12/blog3/8.png"></p>
+<p>再比如更改关键方法的方法体</p>
+<p><img src="/2022/05/12/blog3/9.png"></p>
+<p>无论哪种方法其实都是为了能让壳函数代替原函数去执行 当执行该函数的指令时，解析出指令的OpCode,通过一个巨大的switch case找到处理对应OpCode的函数，然后执行</p>
+<p><img src="/2022/05/12/blog3/10.png"></p>
+<p>简单讲就是壳将原本的指令进行一次封装，将原本的指令转换为另一种表现形式</p>
+<ul>
+<li>  Dex2C<br>首先也是将关键代码注册为native函数，主要借助于JNI反射技术，将Java层的方法全部反射为native层，增大分析难度。之后再通过混淆、字符串加密等操作生成so，最后将so进行加固保护。</li>
+</ul>
+<h4 id="优劣-2"><a href="#优劣-2" class="headerlink" title="优劣"></a>优劣</h4><ul>
+<li><p>  优点<br>加固强度高，目前没有公开的脱壳工具 经过混淆加密后很难还原原函数</p>
+</li>
+<li><p>  缺点<br>效率较低，启动、运行时都比较耗时稳定性、可控性差，容易产生崩溃</p>
+</li>
+</ul>
+<h4 id="特点-2"><a href="#特点-2" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/11.png"></p>
+<p>除一、二代全部特点外 so代码虚拟化 对抗之前所有的脱壳方法</p>
+<h3 id="so加密"><a href="#so加密" class="headerlink" title="so加密"></a>so加密</h3><h4 id="section加密"><a href="#section加密" class="headerlink" title="section加密"></a>section加密</h4><ul>
+<li>  原理<br>将关键方法，存放在自定义的section中，通过解析每个section，将我们自定义的section进行加密。因为so在加载时会优先加载.init_array，所以将解密方法放在.init_array中，获取内存中各个section的起始地址和大小，将需要解密的section还原。</li>
+</ul>
+<h4 id="函数加密"><a href="#函数加密" class="headerlink" title="函数加密"></a>函数加密</h4><ul>
+<li>  原理<br>解析so，根据方法名找到指定的方法，将方法进行加密。加载so时，获取指定方法的地址，通过解密方法将指定方法解密。</li>
+</ul>
+<h4 id="特点-3"><a href="#特点-3" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/12.png"></p>
+<p><img src="/2022/05/12/blog3/13.png"></p>
+<p>由于原本的指令已经被加密成其他的字节，IDA等静态分析工具中会出现大段无法识别的代码</p>
+<h2 id="各厂商特征"><a href="#各厂商特征" class="headerlink" title="各厂商特征"></a>各厂商特征</h2><p>除此外还有很多大佬们可以自行总结</p>
+<h3 id="某梆"><a href="#某梆" class="headerlink" title="某梆"></a>某梆</h3><p>lib/libDexHelper.so、lib/libDexHelper-x86.so、</p>
+<h3 id="某加密"><a href="#某加密" class="headerlink" title="某加密"></a>某加密</h3><p>assets/ijiami.ajm、assets/ijiami.dat、assets/ijm_lib/libexec.so、assets/ijm_lib/libexecmain.so</p>
+<h3 id="某企鹅"><a href="#某企鹅" class="headerlink" title="某企鹅"></a>某企鹅</h3><p>lib/libshell-super.2019.so、lib/libshella-4.1.0.29.so</p>
+<h3 id="某数字"><a href="#某数字" class="headerlink" title="某数字"></a>某数字</h3><p>assets/libjiagu.so、assets/libjiagu_x86.so</p>
+<h3 id="某迦"><a href="#某迦" class="headerlink" title="某迦"></a>某迦</h3><p>lib/libxloader.so</p>
+<p>assets/libvdog、assets/libvdog64、assets/libvdog-x86</p>
+<h3 id="某付盾"><a href="#某付盾" class="headerlink" title="某付盾"></a>某付盾</h3><p>lib/libegis.so、lib/libegis-x86.so</p>
+<h2 id="脱壳工具"><a href="#脱壳工具" class="headerlink" title="脱壳工具"></a>脱壳工具</h2><h3 id="FRIDA-DEXDump"><a href="#FRIDA-DEXDump" class="headerlink" title="FRIDA-DEXDump"></a>FRIDA-DEXDump</h3><h4 id="原理-3"><a href="#原理-3" class="headerlink" title="原理"></a>原理</h4><p>通过Frida在内存中搜索dex\n035，因为Dex的头部都会存在一个dex\n035的模数，所以通过在内存中搜索dex\n035可以搜索到Dex文件。对于一些Dex它们被抹去了头部信息，对于这样的情况，FRIDA-DEXDump也提供了对应的方法，通过遍历当前进程中所有可以读的内存段，通过判断这个段的大小和Dex文件中一些关键区域的关系可以判断是否为一个Dex。</p>
+<h4 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h4><p>在FRIDA-DEXDumpGitHub中下载代码到本地或者通过<code>pip3 install frida-dexdump</code> 安装</p>
+<p><img src="/2022/05/12/blog3/14.png"></p>
+<p>用法就是首先打开，我们需要脱壳的软件，然后执行<code>python main.py -d</code>程序执行开始检索内存中的Dex</p>
+<p><img src="/2022/05/12/blog3/15.png"></p>
+<p>检索到后会保存在SavePath对应的目录下</p>
+<p>也可以通过<code>python main.py -h</code>查看它的其他使用方法</p>
+<p><img src="/2022/05/12/blog3/16.png"></p>
+<p>最终得到它脱出来的Dex，可以看下它脱壳效果</p>
+<p><img src="/2022/05/12/blog3/17.png"></p>
+<h3 id="Youpk"><a href="#Youpk" class="headerlink" title="Youpk"></a>Youpk</h3><h4 id="原理-4"><a href="#原理-4" class="headerlink" title="原理"></a>原理</h4><p>从ClassLinker中遍历所有DexFile对象，在虚拟机中Dex文件都用DexFile对象来表示，并Dump出所有Dex文件。此时只是整体Dump，Dex中的方法还未还原。遍历DexFile中的ClassDef结构，获取到所有Class，主动调用Class中的所有的方法，让程序强制走switch解释器执行，在解释器中添加Hook代码，当方法执行时自动保存CodeItem。根据保存的CodeItem和Dump下来的Dex进行合并，还原Dex中被抽取的指令。</p>
+<h4 id="使用-1"><a href="#使用-1" class="headerlink" title="使用"></a>使用</h4><p>首先下载刷机包和还原工具，目前仅支持刷pixel 1手机</p>
+<p><img src="/2022/05/12/blog3/18.png"></p>
+<p>解压相关的镜像，<code>fastboot flash xxx /Download/xxx.img</code>依次刷入</p>
+<p><img src="/2022/05/12/blog3/19.png"></p>
+<p>配置待脱壳的App包名<code>adb shell &quot;echo com.xxx &gt;&gt; /data/local/tmp/unpacker.config&quot;</code></p>
+<p>启动Apk等待脱壳，每隔10秒将自动重新脱壳(已完全dump的dex将被忽略), 当日志打印unpack end时脱壳完成</p>
+<p>dump文件路径为/data/data/包名/unpacker，使用adb命令将文件pull出</p>
+<p><img src="/2022/05/12/blog3/20.png"></p>
+<p>使用dexfixer.jar修复Dex，<code>java -jar dexfixer.jar /path/unpacker /path/output</code></p>
+<p>最后我们对比一下还原前后的代码</p>
+<p>还原前</p>
+<p><img src="/2022/05/12/blog3/21.png"></p>
+<p>还原后</p>
+<p><img src="/2022/05/12/blog3/22.png"></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文简单地总结了一下Android加固的背景和发展历史，也介绍了一些目前常见的脱壳工具。对于so加密的情况，目前也有许多方法应对，比如ida动态调试dump内存中的so，GG模拟器dump内存，frida dump so，unidbg等等。对于混淆的so，也有jnitrace，unidbg，还有hluwa大佬的大作obpo等工具辅助我们分析。除此以外还有还有一些优秀的脱壳工具如Fart等，我也没有再做介绍了。总之感谢这些大佬们的努力和开源，没有你们就没有白嫖的我们，哈哈…</p>
+]]></content>
+      <categories>
+        <category>Android防护手段</category>
+      </categories>
+      <tags>
+        <tag>防护</tag>
+        <tag>加固</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>hexo&amp;github 搭建属于自己的博客</title>
     <url>/2022/05/12/blog4/</url>
     <content><![CDATA[<h1 id="hexo-amp-github-搭建博客（保姆级）"><a href="#hexo-amp-github-搭建博客（保姆级）" class="headerlink" title="hexo&amp;github 搭建博客（保姆级）"></a>hexo&amp;github 搭建博客（保姆级）</h1><h2 id="安装-Hexo"><a href="#安装-Hexo" class="headerlink" title="安装 Hexo"></a>安装 Hexo</h2><ol>
@@ -242,234 +399,6 @@
       </tags>
   </entry>
   <entry>
-    <title>某涉黄APP产业链分析</title>
-    <url>/2023/02/08/%E6%9F%90%E6%B6%89%E9%BB%84APP%E4%BA%A7%E4%B8%9A%E9%93%BE%E5%88%86%E6%9E%90/</url>
-    <content><![CDATA[<h2 id="前情提要"><a href="#前情提要" class="headerlink" title="前情提要"></a>前情提要</h2><p>最近逛论坛看到一个帖子，大概就是小兄弟想看看某APP充值VIP是不是真的可以成为“VIP”，小编大概看了一下，发现充值接口大部分都是话费充值和电费充值，只有较大金额才是各种收款码收款。</p>
-<p>之前做病毒分析时也遇到过很多涉黄APP，其中大多数都是通过一些集成支付接口来完成支付，这种充值话费和电费的也是头一次看到，可能是自己没搞这行很久了，产业链进行了更新，由于比较新奇，于是乎就了解了一下这个充值话费和电费的套路。</p>
-<p>小编先在APP发起相关支付请求，看看具体给谁支付电费、话费，简单的操作了几笔，发现每一笔都是不同的对象，于是小编从侧面了解了一下这些预充值话费和电费的用户，他们是从什么平台充值的，具体是哪家店？</p>
-<p>了解下来发现他们充值话费、电费都不是通过官方渠道，而是通过一些小网店、公众号或者是某个上级直接代充，这种充值的特点就是不能实时到账，需要等待，等待时间长短不一。</p>
-<h2 id="产业链流程"><a href="#产业链流程" class="headerlink" title="产业链流程"></a>产业链流程</h2><p>整个产业链通过一个完全不知情的用户A和一个使用涉黄APP的用户B把原本直接打给黑产受益团伙的钱洗白。整个过程极度隐秘，无法直接跟踪钱款去向。</p>
-<h3 id="流程图"><a href="#流程图" class="headerlink" title="流程图"></a>流程图</h3><p>![[色情app黑色产业链.drawio.png]]</p>
-<h3 id="文字解读"><a href="#文字解读" class="headerlink" title="文字解读"></a>文字解读</h3><ul>
-<li><p>用户A通过各种广告了解到打折的话费、电费充值渠道，根本不会想到和黑灰产有什么关系，直接充值，等待到账；</p>
-</li>
-<li><p>等待过程钱会经过很多的中转，最后到黑产团伙账户；（经了解其中还包含了很多链条，比如你充值的商家，商家可能还有上家，上家一般是是所谓的台子，然后会打包交给通道商，通道商就是专门破解话费充值渠道，将破解后做成的充值链接提供给哪些黑灰产项目，就是我们下面用户B点击的充值链接）</p>
-</li>
-<li><p>用户B通过广告链接下载不明APP，APP内通过免费内容引导用户充值会员以及购买各种道具，APP内一般还会包含棋牌类页面，购买的道具就可以直接玩棋牌游戏；</p>
-</li>
-<li><p>用户B被引导后充值，通过充值话费、电费、转账等接口将所谓的会员、道具费用充值给正常的A用户。（B用户充值会员、道具成功后，待充值话费、电费库里面的某个A用户充值成功）</p>
-</li>
-</ul>
-<h2 id="洗钱种类"><a href="#洗钱种类" class="headerlink" title="洗钱种类"></a>洗钱种类</h2><h3 id="电费充值："><a href="#电费充值：" class="headerlink" title="电费充值："></a>电费充值：</h3><p>这种充值方式一般是金额稍微大点的，200往上，400、500居多，充值对象会有一些使用电费较多的个人和一些小厂房，这种充值只需要充值电费的户号和用户名即可。<br>![[Pasted image 20220927120031.png|300]]<br>对其中一个账号模拟充值查看具体信息，这个账户是一个公司，账户已有余额就高达几万。<br>![[Pasted image 20220928141656.png|300]]<br>![[Pasted image 20220928141817.png|300]]<br>![[Pasted image 20220928141805.png]]<br>![[Pasted image 20220928141716.png|300]]</p>
-<h3 id="话费充值："><a href="#话费充值：" class="headerlink" title="话费充值："></a>话费充值：</h3><p>话费充值是最主要的充值方式，金额下限和上限较为灵活，可以是30、50的零钱，也可以是400、500的大额充值，有话费充值需求的人也比较多，相对其他的充值接口，该充值更容易成功，洗钱金额应该更大。<br>![[Pasted image 20220927120055.png|300]]</p>
-<p>![[Pasted image 20220927120208.png|300]]</p>
-<h3 id="支付宝扫码转账"><a href="#支付宝扫码转账" class="headerlink" title="支付宝扫码转账"></a>支付宝扫码转账</h3><p>支付宝的转账涉及了个人收款码和商家商品码，其中个人收款码，受害者只需要扫描对应的收款码，填写收款人的姓名即可转账成功，多为跑分收款二维码。</p>
-<h4 id="个人收款码："><a href="#个人收款码：" class="headerlink" title="个人收款码："></a>个人收款码：</h4><p>![[Pasted image 20220927120127.png|300]]<br>![[Pasted image 20220927120231.png|300]]</p>
-<h4 id="商家商品码"><a href="#商家商品码" class="headerlink" title="商家商品码"></a>商家商品码</h4><p>商家商品码就是一些小店铺的收款码，针对某个商品生成的收款码，这种情况下就和走正常购物一样，钱被流入商品交易市场，基本找不到去向。这些商家收款人码也多为跑分二维码。<br>![[Pasted image 20220927120144.png|300]]<br>![[Pasted image 20220927120247.png|300]]</p>
-<h3 id="微信红包转账"><a href="#微信红包转账" class="headerlink" title="微信红包转账"></a>微信红包转账</h3><p>扫码加好友，发送对应的订单验证码后会提示转红包给对应的商家或个人，这种大量是未实名的企业用户。这个过程需要加对方的微信，小编也尝试加了几个，加上之后对方也是言简意赅，直接问码，也就是下方付款订单的验证码，他们“验码”之后让你发对应金额的红包，这种很难确定是黑产团伙还是某个利益团伙。<br>![[Pasted image 20220928140643.png|300]]</p>
-<p>![[Pasted image 20220928140705.png|300]]<br>![[Pasted image 20220928141628.png|300]]</p>
-<p>![[Pasted image 20220928140930.png|300]]<br>下面这个添加后，会发你支付宝的收款码，让你转账，而且不止一个支付宝收款码，这些支付宝的收款码又包含了商家码和个人码。总之就是增加金钱中转次数，让洗钱过程更加隐蔽。<br>![[Pasted image 20220928140957.png|300]]<br>![[Pasted image 20220928141140.png|300]]<br>![[Pasted image 20220928141147.png|300]]</p>
-<h2 id="真优惠还是洗钱？"><a href="#真优惠还是洗钱？" class="headerlink" title="真优惠还是洗钱？"></a>真优惠还是洗钱？</h2><p>小编在此次分析中也找了很多资料，某乎上也有博主揭露过这种洗钱方式，根据博主写的，有些棋牌网站专门会提供所谓的“话费”上分，所谓上分就是将钱换成对应的游戏筹码。</p>
-<p>这里提到上分，我之前还有文章提到过“跑分”也是类似，就是专门拿一些店铺或者个人的收款码来洗钱，可以看看我之前的文章：<a href="https://mp.weixin.qq.com/s/ZlnUszZADQlr4avbxHNVOg">https://mp.weixin.qq.com/s/ZlnUszZADQlr4avbxHNVOg</a></p>
-<p>这个充值过程就会从库中匹配金额、种类一致的待充值用户，然后将用来购买筹码的钱充值给正常用户。<br>![[Pasted image 20221008151638.png|300]]</p>
-<p>在了解这个产业链的过程中看了很多视频文章，同时也浏览了一些评论，但是评论中大多数人都觉得这是好事，便宜打折充值，何乐不为。（这里提醒一下如果你充值接口对接的上级正好是黑灰产团伙，那么你的充值可能会一直处于等待中，这个过程可能黑灰产跑路，那么你的充值将石沉大海）</p>
-<p>但是我们有没有考虑过我们在无形中助长了黑灰产的发展，可能被骗的某个人就是我们的朋友。</p>
-<h2 id="服务器简单溯源"><a href="#服务器简单溯源" class="headerlink" title="服务器简单溯源"></a>服务器简单溯源</h2><h3 id="小视频（主站）api-jt-wa-com"><a href="#小视频（主站）api-jt-wa-com" class="headerlink" title="小视频（主站）api.jt*******wa.com"></a>小视频（主站）api.jt*******wa.com</h3><p><a href="https://api.jtshuzhiwa.com/m_sns/video/apply_play_permission">https://api.jtshuzhiwa.com/m_sns/video/apply_play_permission</a><br><a href="https://api.jtshuzhiwa.com/m_game/game_list?game_ids=%5B%5D">https://api.jtshuzhiwa.com/m_game/game_list?game_ids=%5B%5D</a><br><a href="https://api.jtshuzhiwa.com/m_sns/posts?post_type=recommend">https://api.jtshuzhiwa.com/m_sns/posts?post_type=recommend</a></p>
-<p>![[Pasted image 20220928145418.png]]</p>
-<p>![[Pasted image 20220928160445.png]]</p>
-<p>![[Pasted image 20220928160254.png]]</p>
-<p>![[Pasted image 20220928160134.png]]</p>
-<h3 id="直播平台（第三方）api-s-c-com"><a href="#直播平台（第三方）api-s-c-com" class="headerlink" title="直播平台（第三方）api.s*******c.com"></a>直播平台（第三方）api.s*******c.com</h3><p><a href="https://api.s****c.com/tl/index/cache/version?appId=10005">https://api.s****c.com/tl/index/cache/version?appId=10005</a></p>
-<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>黑灰产一直是网络安全的毒瘤，很难彻底拔除，技术在不断的发展，从一开始的收到一笔钱要通过人力从不同的提款机取出不等份额的钱来洗白，到各种跑分收款码，再到各种上分充值，洗钱的方式越来越隐秘，基本无法定位黑钱的来龙去脉。</p>
-<p>借用“差评君”的一段话“我们没有能力劝黑产们改邪归正，也没有办法用道德标准要求张三们别再选择慢充了，因为他们也是记得利益者”，但是我们可以通过更深入内幕描述来奉劝各位涉黄涉赌人员早点上岸。</p>
-<p><strong>请安装“国家反诈中心”APP。</strong></p>
-]]></content>
-      <categories>
-        <category>病毒分析</category>
-      </categories>
-      <tags>
-        <tag>病毒</tag>
-        <tag>涉黄</tag>
-        <tag>涉毒</tag>
-        <tag>诈骗</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>重放攻击防御手段</title>
-    <url>/2022/05/14/%E9%87%8D%E6%94%BE%E6%94%BB%E5%87%BB%E9%98%B2%E5%BE%A1%E6%89%8B%E6%AE%B5/</url>
-    <content><![CDATA[<h2 id="重放攻击"><a href="#重放攻击" class="headerlink" title="重放攻击"></a>重放攻击</h2><p>入侵者从网络上截取主机A发送给主机B的报文，并把由A加密的报文发送给B，使主机B误以为入侵者就是主机A，然后主机B向伪装成A的入侵者发送应当发送给A的报文。</p>
-<h3 id="防御手段"><a href="#防御手段" class="headerlink" title="防御手段"></a>防御手段</h3><p>防止重放攻击的方法是使用不重数</p>
-<h4 id="1-加随机数"><a href="#1-加随机数" class="headerlink" title="1. 加随机数"></a>1. 加随机数</h4><p>该方法优点是认证双方不需要时间同步，双方记住使用过的随机数，如发现报文中有以前使用过的随机数，就认为是重放攻击。缺点是需要额外保存使用过的随机数，若记录的时间段较长，则保存和查询的开销较大。</p>
-<h4 id="2-加时间戳"><a href="#2-加时间戳" class="headerlink" title="2. 加时间戳"></a>2. 加时间戳</h4><p>该方法优点是不用额外保存其他信息。缺点是认证双方需要准确的时间同步，同步越好，受攻击的可能性就越小。但当系统很庞大，跨越的区域较广时，要做到精确的时间同步并不是很容易。</p>
-<h4 id="3-加流水号"><a href="#3-加流水号" class="headerlink" title="3. 加流水号"></a>3. 加流水号</h4><p>就是双方在报文中添加一个逐步递增的整数，只要接收到一个不连续的流水号报文(太大或太小)，就认定有重放威胁。该方法优点是不需要时间同步，保存的信息量比随机数方式小。缺点是一旦攻击者对报文解密成功，就可以获得流水号，从而每次将流水号递增欺骗认证端。</p>
-<p>在实际中，常将方法(1)和方法(2)组合使用，这样就只需保存某个很短时间段内的所有随机数，而且时间戳的同步也不需要太精确（最通常的做法是利用时间戳+随机数字生成随机码,并入交互报文中即可）。<br>对付重放攻击除了使用本以上方法外，还可以使用挑战一应答机制和一次性口令机制，而且似乎后面两种方法在实际中使用得更广泛。</p>
-]]></content>
-      <categories>
-        <category>web防御手段</category>
-      </categories>
-      <tags>
-        <tag>重放攻击</tag>
-        <tag>防御手段</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Android加固little总结</title>
-    <url>/2022/05/12/blog3/</url>
-    <content><![CDATA[<h1 id="Android软件加固"><a href="#Android软件加固" class="headerlink" title="Android软件加固"></a>Android软件加固</h1><h2 id="Android软件加固概述"><a href="#Android软件加固概述" class="headerlink" title="Android软件加固概述"></a>Android软件加固概述</h2><p>从2012年开始，移动互联网进入快速发展阶段，Android App开发热潮的兴起，也推动了Android平台软件保护技术的发展。</p>
-<ul>
-<li>  <strong>为何做加固</strong>   </li>
-</ul>
-<ol>
-<li> 保护核心代码  </li>
-<li> 防止营销作弊的手段   </li>
-<li> 防止代码被篡改 …</li>
-</ol>
-<h2 id="加固代际"><a href="#加固代际" class="headerlink" title="加固代际"></a>加固代际</h2><p>根据不同的理解，现在加固代际基本上可以按照五代或者三代去区分。</p>
-<h3 id="第一代：动态加载类"><a href="#第一代：动态加载类" class="headerlink" title="第一代：动态加载类"></a>第一代：动态加载类</h3><p>Apk中没有完整原始的Dex，需要运行时动态的加载到内存中</p>
-<h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><ul>
-<li><p>  落地加载<br>我们拿到需要加密的Apk和自己的壳程序Apk，然后用加密算法对源Apk进行加密再将壳Apk进行合并得到新的Dex文件，最后替换壳程序中的dex文件即可，得到新的Apk,那么这个新的Apk我们也叫作脱壳程序Apk.他已经不是一个完整意义上的Apk程序了，他的主要工作是：负责解密源Apk.然后加载Apk,让其正常运行起来。运行时首先将我们的Dex文件或者Apk文件解密，然后利用DexClassLoader加载器将其加载进内存中，然后利用反射加载待加固的Apk的Appkication，然后运行待加固程序即可。<br><img src="/2022/05/12/blog3/1.png"><br><img src="/2022/05/12/blog3/2.png"></p>
-</li>
-<li><p>  不落地加载<br>落地加载将Dex文件解密出来会保存到文件中，再通过DexClassLoader加载进内存中，而不落地加载直接重写DexClassLoader使其可以直接加载字节数组，避免写入文件中。我们要做的是重写DexClassLoader，而这涉及到三个函数defineClass、findClass、loadClass，在一个类被加载的时候，会先后调用这三个函数加载一个类，所以我们需要重写这三个函数。系统的DexClassLoader加载Dex进入内存的也必然是通过字节加载的，而在系统so中的libdvm.so中的openDexFile可以直接加载Dex文件，那么现在清楚了，我们可以通过编写so文件调用openDexFile函数加载Dex字节数组，值得注意的是，openDexFile函数返回值为一个int类型的cookie，可以简单理解成一个dex文件的’身份码’，通过该’身份码’即可操控这个dex文件,至于怎么调用该函数，可以通过dlopen和dlsym函数调用。</p>
-</li>
-</ul>
-<p><img src="/2022/05/12/blog3/3.png"></p>
-<h4 id="优劣"><a href="#优劣" class="headerlink" title="优劣"></a>优劣</h4><ul>
-<li><p>  优点<br>比较容易实现，无明显的兼容性问题 能有效对抗静态分析和二次打包</p>
-</li>
-<li><p>  缺点<br>启动时需要进行大量的解密运算，容易造成卡死的情况 在内存中的数据为完整的Dex，通过动态调试Dump内存即可获取完整的Dex</p>
-</li>
-</ul>
-<h4 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/4.png"><br>Dex字符串加密 资源加密 对抗反编译 对抗调试 Dex动态加载 so加密</p>
-<h3 id="第二代：函数抽取类"><a href="#第二代：函数抽取类" class="headerlink" title="第二代：函数抽取类"></a>第二代：函数抽取类</h3><h4 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h4><p>主要分为两个步骤指令抽取和指令还原</p>
-<ul>
-<li>  指令抽取<br>解析原始Dex文件格式，保存所有方法的代码结构体信息，通过传入需要置空指令的方法和类名，检索到其代码结构体信息。通过方法的代码结构体信息获取指令个数和偏移地址，构造空指令集，然后覆盖原始指令，重新计算dex文件的checksum和signature信息，回写到头部信息中。</li>
-</ul>
-<p><img src="/2022/05/12/blog3/5.png"></p>
-<p><img src="/2022/05/12/blog3/6.png"></p>
-<ul>
-<li>  指令还原<br>native层hook系统函数dexFindClass，获取类结构体信息（dexFindClass函数用于查找类的DexClassDef结构），获取类中所有的方法信息，通过指定方法名进行过滤，获取该方法的代码结构体信息，获取该方法被抽取的指令集，修改方法对应的内存地址为可读属性，直接进行指令还原。</li>
-</ul>
-<h4 id="优劣-1"><a href="#优劣-1" class="headerlink" title="优劣"></a>优劣</h4><ul>
-<li><p>  优点<br>加密粒度变小，加密技术从Dex文件级变为方法级 按需解密，解密操作延迟到某类方法被执行前，如果方法不被执行，则不被解密 解密后的代码在内存不连续，克服了内存被Dump的缺点，有效保护了移动客户端的Java代码</p>
-</li>
-<li><p>  缺点<br>使用大量的虚拟机内部结构，会出现兼容性问题，无法保护所有方法 无法对抗自定义虚拟机 它跟虚拟机的JIT优化出现冲突，达不到最佳的性能表现</p>
-</li>
-</ul>
-<h4 id="特点-1"><a href="#特点-1" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/7.png"></p>
-<p>除一代有的特点外 内存中无完整、连续的Dex so代码混淆、膨胀</p>
-<h3 id="第三代：VMP、Dex2C类"><a href="#第三代：VMP、Dex2C类" class="headerlink" title="第三代：VMP、Dex2C类"></a>第三代：VMP、Dex2C类</h3><h4 id="原理-2"><a href="#原理-2" class="headerlink" title="原理"></a>原理</h4><ul>
-<li>  VMP<br>执行到关键代码时进入壳so执行，关于这一点，不同的厂商有着不同的做法，比如把关键函数变成native函数，在壳so中动态或者静态注册</li>
-</ul>
-<p><img src="/2022/05/12/blog3/8.png"></p>
-<p>再比如更改关键方法的方法体</p>
-<p><img src="/2022/05/12/blog3/9.png"></p>
-<p>无论哪种方法其实都是为了能让壳函数代替原函数去执行 当执行该函数的指令时，解析出指令的OpCode,通过一个巨大的switch case找到处理对应OpCode的函数，然后执行</p>
-<p><img src="/2022/05/12/blog3/10.png"></p>
-<p>简单讲就是壳将原本的指令进行一次封装，将原本的指令转换为另一种表现形式</p>
-<ul>
-<li>  Dex2C<br>首先也是将关键代码注册为native函数，主要借助于JNI反射技术，将Java层的方法全部反射为native层，增大分析难度。之后再通过混淆、字符串加密等操作生成so，最后将so进行加固保护。</li>
-</ul>
-<h4 id="优劣-2"><a href="#优劣-2" class="headerlink" title="优劣"></a>优劣</h4><ul>
-<li><p>  优点<br>加固强度高，目前没有公开的脱壳工具 经过混淆加密后很难还原原函数</p>
-</li>
-<li><p>  缺点<br>效率较低，启动、运行时都比较耗时稳定性、可控性差，容易产生崩溃</p>
-</li>
-</ul>
-<h4 id="特点-2"><a href="#特点-2" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/11.png"></p>
-<p>除一、二代全部特点外 so代码虚拟化 对抗之前所有的脱壳方法</p>
-<h3 id="so加密"><a href="#so加密" class="headerlink" title="so加密"></a>so加密</h3><h4 id="section加密"><a href="#section加密" class="headerlink" title="section加密"></a>section加密</h4><ul>
-<li>  原理<br>将关键方法，存放在自定义的section中，通过解析每个section，将我们自定义的section进行加密。因为so在加载时会优先加载.init_array，所以将解密方法放在.init_array中，获取内存中各个section的起始地址和大小，将需要解密的section还原。</li>
-</ul>
-<h4 id="函数加密"><a href="#函数加密" class="headerlink" title="函数加密"></a>函数加密</h4><ul>
-<li>  原理<br>解析so，根据方法名找到指定的方法，将方法进行加密。加载so时，获取指定方法的地址，通过解密方法将指定方法解密。</li>
-</ul>
-<h4 id="特点-3"><a href="#特点-3" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/12.png"></p>
-<p><img src="/2022/05/12/blog3/13.png"></p>
-<p>由于原本的指令已经被加密成其他的字节，IDA等静态分析工具中会出现大段无法识别的代码</p>
-<h2 id="各厂商特征"><a href="#各厂商特征" class="headerlink" title="各厂商特征"></a>各厂商特征</h2><p>除此外还有很多大佬们可以自行总结</p>
-<h3 id="某梆"><a href="#某梆" class="headerlink" title="某梆"></a>某梆</h3><p>lib/libDexHelper.so、lib/libDexHelper-x86.so、</p>
-<h3 id="某加密"><a href="#某加密" class="headerlink" title="某加密"></a>某加密</h3><p>assets/ijiami.ajm、assets/ijiami.dat、assets/ijm_lib/libexec.so、assets/ijm_lib/libexecmain.so</p>
-<h3 id="某企鹅"><a href="#某企鹅" class="headerlink" title="某企鹅"></a>某企鹅</h3><p>lib/libshell-super.2019.so、lib/libshella-4.1.0.29.so</p>
-<h3 id="某数字"><a href="#某数字" class="headerlink" title="某数字"></a>某数字</h3><p>assets/libjiagu.so、assets/libjiagu_x86.so</p>
-<h3 id="某迦"><a href="#某迦" class="headerlink" title="某迦"></a>某迦</h3><p>lib/libxloader.so</p>
-<p>assets/libvdog、assets/libvdog64、assets/libvdog-x86</p>
-<h3 id="某付盾"><a href="#某付盾" class="headerlink" title="某付盾"></a>某付盾</h3><p>lib/libegis.so、lib/libegis-x86.so</p>
-<h2 id="脱壳工具"><a href="#脱壳工具" class="headerlink" title="脱壳工具"></a>脱壳工具</h2><h3 id="FRIDA-DEXDump"><a href="#FRIDA-DEXDump" class="headerlink" title="FRIDA-DEXDump"></a>FRIDA-DEXDump</h3><h4 id="原理-3"><a href="#原理-3" class="headerlink" title="原理"></a>原理</h4><p>通过Frida在内存中搜索dex\n035，因为Dex的头部都会存在一个dex\n035的模数，所以通过在内存中搜索dex\n035可以搜索到Dex文件。对于一些Dex它们被抹去了头部信息，对于这样的情况，FRIDA-DEXDump也提供了对应的方法，通过遍历当前进程中所有可以读的内存段，通过判断这个段的大小和Dex文件中一些关键区域的关系可以判断是否为一个Dex。</p>
-<h4 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h4><p>在FRIDA-DEXDumpGitHub中下载代码到本地或者通过<code>pip3 install frida-dexdump</code> 安装</p>
-<p><img src="/2022/05/12/blog3/14.png"></p>
-<p>用法就是首先打开，我们需要脱壳的软件，然后执行<code>python main.py -d</code>程序执行开始检索内存中的Dex</p>
-<p><img src="/2022/05/12/blog3/15.png"></p>
-<p>检索到后会保存在SavePath对应的目录下</p>
-<p>也可以通过<code>python main.py -h</code>查看它的其他使用方法</p>
-<p><img src="/2022/05/12/blog3/16.png"></p>
-<p>最终得到它脱出来的Dex，可以看下它脱壳效果</p>
-<p><img src="/2022/05/12/blog3/17.png"></p>
-<h3 id="Youpk"><a href="#Youpk" class="headerlink" title="Youpk"></a>Youpk</h3><h4 id="原理-4"><a href="#原理-4" class="headerlink" title="原理"></a>原理</h4><p>从ClassLinker中遍历所有DexFile对象，在虚拟机中Dex文件都用DexFile对象来表示，并Dump出所有Dex文件。此时只是整体Dump，Dex中的方法还未还原。遍历DexFile中的ClassDef结构，获取到所有Class，主动调用Class中的所有的方法，让程序强制走switch解释器执行，在解释器中添加Hook代码，当方法执行时自动保存CodeItem。根据保存的CodeItem和Dump下来的Dex进行合并，还原Dex中被抽取的指令。</p>
-<h4 id="使用-1"><a href="#使用-1" class="headerlink" title="使用"></a>使用</h4><p>首先下载刷机包和还原工具，目前仅支持刷pixel 1手机</p>
-<p><img src="/2022/05/12/blog3/18.png"></p>
-<p>解压相关的镜像，<code>fastboot flash xxx /Download/xxx.img</code>依次刷入</p>
-<p><img src="/2022/05/12/blog3/19.png"></p>
-<p>配置待脱壳的App包名<code>adb shell &quot;echo com.xxx &gt;&gt; /data/local/tmp/unpacker.config&quot;</code></p>
-<p>启动Apk等待脱壳，每隔10秒将自动重新脱壳(已完全dump的dex将被忽略), 当日志打印unpack end时脱壳完成</p>
-<p>dump文件路径为/data/data/包名/unpacker，使用adb命令将文件pull出</p>
-<p><img src="/2022/05/12/blog3/20.png"></p>
-<p>使用dexfixer.jar修复Dex，<code>java -jar dexfixer.jar /path/unpacker /path/output</code></p>
-<p>最后我们对比一下还原前后的代码</p>
-<p>还原前</p>
-<p><img src="/2022/05/12/blog3/21.png"></p>
-<p>还原后</p>
-<p><img src="/2022/05/12/blog3/22.png"></p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文简单地总结了一下Android加固的背景和发展历史，也介绍了一些目前常见的脱壳工具。对于so加密的情况，目前也有许多方法应对，比如ida动态调试dump内存中的so，GG模拟器dump内存，frida dump so，unidbg等等。对于混淆的so，也有jnitrace，unidbg，还有hluwa大佬的大作obpo等工具辅助我们分析。除此以外还有还有一些优秀的脱壳工具如Fart等，我也没有再做介绍了。总之感谢这些大佬们的努力和开源，没有你们就没有白嫖的我们，哈哈…</p>
-]]></content>
-      <categories>
-        <category>Android防护手段</category>
-      </categories>
-      <tags>
-        <tag>防护</tag>
-        <tag>加固</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>小米手机—Redmi K20 Pro刷Magisk、Xposed等环境</title>
-    <url>/2022/05/11/blog2/</url>
-    <content><![CDATA[<h3 id="手机解锁BL"><a href="#手机解锁BL" class="headerlink" title="手机解锁BL"></a>手机解锁BL</h3><p>1、我们到指定网站<a href="http://www.miui.com/unlock/download.html">http://www.miui.com/unlock/download.html</a> 下载解锁工具，得到解锁工具包后解压双击运行miflash_unlock.exe，登录自己账号。<br><img src="/2022/05/11/blog2/1.png"></p>
-<p>2、手机关机状态下长按手机的“音量减键+电源键”，进入手机FASTBOOT模式（有个兔子的界面就是），然后数据线插入手机和电脑连接，如下显示已连接手机后，我们点击解锁即可等待解锁。<br><img src="/2022/05/11/blog2/2.png"><br><img src="/2022/05/11/blog2/3.png"></p>
-<h3 id="刷入Magisk"><a href="#刷入Magisk" class="headerlink" title="刷入Magisk"></a>刷入Magisk</h3><p>高版本的Magisk可以通过卡刷和直接安装，本次我们按照<a href="https://topjohnwu.github.io/Magisk/install.html#samsung-system-as-root">官网介绍</a>来安装</p>
-<p>1、首先我们要下载对应的系统镜像，因为我们需要boot.img文件，小米手机可到<a href="https://xiaomirom.com/">下载 小米ROM</a>下载，找到自己机型对应的系统版本即可，要和手机系统版本号一致。下载后需要解压提取其中boot.img文件，将文件push到我们的手机（adb push）。<br><img src="/2022/05/11/blog2/4.png"></p>
-<p>2、我们还需要去<a href="https://github.com/topjohnwu/Magisk">Magisk github</a>下载安装文件。<br><img src="/2022/05/11/blog2/5.png"></p>
-<p>3、将我们下载的Magisk安装包安装后打开，下图是我们已经安装好的Magisk，我们点击安装——下一步——选择并修补一个文件——选择我们要push到手机的boot.img文件即可<br><img src="/2022/05/11/blog2/6.png" width="50%"></p>
-<img src="/2022/05/11/blog2/7.png" width="50%">
-
-<img src="/2022/05/11/blog2/8.png" width="50%">
-
-<img src="/2022/05/11/blog2/9.png" width="50%">
-
-<p>4、接着上步，会生成一个magisk_patched_random_strings.img文件，我们将该文件copy到自己电脑即可（adb pull）<br><img src="/2022/05/11/blog2/10.png" width="50%"></p>
-<p>5、接下来我们将copy到电脑的magisk_patched_random_strings.img文件重新刷入手机即可（还是boot分区）,最后重启即可。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">fastboot flash boot magisk_patched_random_strings.img</span><br><span class="line">fastboot reboot</span><br></pre></td></tr></table></figure>
-
-<h3 id="其他工具环境"><a href="#其他工具环境" class="headerlink" title="其他工具环境"></a>其他工具环境</h3><h4 id="LSPosed和Root-hide"><a href="#LSPosed和Root-hide" class="headerlink" title="LSPosed和Root hide"></a>LSPosed和Root hide</h4><p>我安装的是最新版的Magisk（V24），废除了之前的Riru,采用Zygisk替代<br><img src="/2022/05/11/blog2/11.png" width="50%"><br>我们打开后就可以下载对应的模块达到对应的目的，这个版本模块无法在Magisk里面下载更新，只能自己下载zip包本地安装，主要有几个</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Zygisk-LSPosed——替代之前的LSPosed、riru-edxposed</span><br><span class="line">Shamiko（可以和frida共存）——替代之前的riru-momohide、hide</span><br></pre></td></tr></table></figure>
-<img src="/2022/05/11/blog2/12.png" width="50%">
-
-<h4 id="Momo"><a href="#Momo" class="headerlink" title="Momo"></a>Momo</h4><p>这个工具主要就是检测我们手机都有哪些风险环境<br><img src="/2022/05/11/blog2/13.png" width="50%"></p>
-<h3 id="Frida"><a href="#Frida" class="headerlink" title="Frida"></a>Frida</h3><p>这个不用过多介绍，直接官网下载push到手机，提权即可使用，(当然Magisk里面也有对应的插件)如果被检测，可以试试<code>strong-frida</code>，这里就不过多介绍了。</p>
-<h3 id="安装burp证书"><a href="#安装burp证书" class="headerlink" title="安装burp证书"></a>安装burp证书</h3><p><img src="/2022/05/11/blog2/14.png"><br><img src="/2022/05/11/blog2/15.png"><br>导出的.crt文件push到手机上<br>我们在小米手机设置也搜索证书，选择要安装的证书安装，这样安装后应该在用户凭据下，我们需要把它移到系统凭据下，这时候就需要借助<code>Magisk</code>的<code>Move_Certificates</code>模块<br><img src="/2022/05/11/blog2/16.png" width="50%"><br><img src="/2022/05/11/blog2/17.png" width="50%"><br>我们找到<a href="https://github.com/Magisk-Modules-Repo/movecert"><code>Move_Certificates</code></a>模块安装后重启手机即可<br>重启手机后我们在设置里面搜索信任的凭证，可以看到我们的证书已经在系统凭据下了。<br><img src="/2022/05/11/blog2/18.png" width="50%"></p>
-<p>这样我们就可以正常抓包了，但是对于有证书校验的客户端，我们还是需要配合<code>JustMePlush</code>、<a href="https://github.com/Fuzion24/JustTrustMe"><code>JustTrustMe</code></a>、<a href="https://github.com/ac-pm/SSLUnpinning_Xposed"><code>SSLUnpinning</code></a>等hook工具</p>
-]]></content>
-      <categories>
-        <category>刷机</category>
-        <category>逆向环境</category>
-      </categories>
-      <tags>
-        <tag>刷机</tag>
-        <tag>小米</tag>
-        <tag>Magisk</tag>
-        <tag>Xposed</tag>
-        <tag>burp证书</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>objection+ Wallbreaker基本使用</title>
     <url>/2022/05/13/blog5/</url>
     <content><![CDATA[<h1 id="objection-Wallbreaker基本使用"><a href="#objection-Wallbreaker基本使用" class="headerlink" title="objection+ Wallbreaker基本使用"></a>objection+ Wallbreaker基本使用</h1><table>
@@ -636,6 +565,77 @@
         <tag>frida</tag>
         <tag>objection</tag>
         <tag>Wallbreaker</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>某涉黄APP产业链分析</title>
+    <url>/2023/02/08/%E6%9F%90%E6%B6%89%E9%BB%84APP%E4%BA%A7%E4%B8%9A%E9%93%BE%E5%88%86%E6%9E%90/</url>
+    <content><![CDATA[<h2 id="前情提要"><a href="#前情提要" class="headerlink" title="前情提要"></a>前情提要</h2><p>最近逛论坛看到一个帖子，大概就是小兄弟想看看某APP充值VIP是不是真的可以成为“VIP”，小编大概看了一下，发现充值接口大部分都是话费充值和电费充值，只有较大金额才是各种收款码收款。</p>
+<p>之前做病毒分析时也遇到过很多涉黄APP，其中大多数都是通过一些集成支付接口来完成支付，这种充值话费和电费的也是头一次看到，可能是自己没搞这行很久了，产业链进行了更新，由于比较新奇，于是乎就了解了一下这个充值话费和电费的套路。</p>
+<p>小编先在APP发起相关支付请求，看看具体给谁支付电费、话费，简单的操作了几笔，发现每一笔都是不同的对象，于是小编从侧面了解了一下这些预充值话费和电费的用户，他们是从什么平台充值的，具体是哪家店？</p>
+<p>了解下来发现他们充值话费、电费都不是通过官方渠道，而是通过一些小网店、公众号或者是某个上级直接代充，这种充值的特点就是不能实时到账，需要等待，等待时间长短不一。</p>
+<h2 id="产业链流程"><a href="#产业链流程" class="headerlink" title="产业链流程"></a>产业链流程</h2><p>整个产业链通过一个完全不知情的用户A和一个使用涉黄APP的用户B把原本直接打给黑产受益团伙的钱洗白。整个过程极度隐秘，无法直接跟踪钱款去向。</p>
+<h3 id="流程图"><a href="#流程图" class="headerlink" title="流程图"></a>流程图</h3><p>![[色情app黑色产业链.drawio.png]]</p>
+<h3 id="文字解读"><a href="#文字解读" class="headerlink" title="文字解读"></a>文字解读</h3><ul>
+<li><p>用户A通过各种广告了解到打折的话费、电费充值渠道，根本不会想到和黑灰产有什么关系，直接充值，等待到账；</p>
+</li>
+<li><p>等待过程钱会经过很多的中转，最后到黑产团伙账户；（经了解其中还包含了很多链条，比如你充值的商家，商家可能还有上家，上家一般是是所谓的台子，然后会打包交给通道商，通道商就是专门破解话费充值渠道，将破解后做成的充值链接提供给哪些黑灰产项目，就是我们下面用户B点击的充值链接）</p>
+</li>
+<li><p>用户B通过广告链接下载不明APP，APP内通过免费内容引导用户充值会员以及购买各种道具，APP内一般还会包含棋牌类页面，购买的道具就可以直接玩棋牌游戏；</p>
+</li>
+<li><p>用户B被引导后充值，通过充值话费、电费、转账等接口将所谓的会员、道具费用充值给正常的A用户。（B用户充值会员、道具成功后，待充值话费、电费库里面的某个A用户充值成功）</p>
+</li>
+</ul>
+<h2 id="洗钱种类"><a href="#洗钱种类" class="headerlink" title="洗钱种类"></a>洗钱种类</h2><h3 id="电费充值："><a href="#电费充值：" class="headerlink" title="电费充值："></a>电费充值：</h3><p>这种充值方式一般是金额稍微大点的，200往上，400、500居多，充值对象会有一些使用电费较多的个人和一些小厂房，这种充值只需要充值电费的户号和用户名即可。<br>![[Pasted image 20220927120031.png|300]]<br>对其中一个账号模拟充值查看具体信息，这个账户是一个公司，账户已有余额就高达几万。<br>![[Pasted image 20220928141656.png|300]]<br>![[Pasted image 20220928141817.png|300]]<br>![[Pasted image 20220928141805.png]]<br>![[Pasted image 20220928141716.png|300]]</p>
+<h3 id="话费充值："><a href="#话费充值：" class="headerlink" title="话费充值："></a>话费充值：</h3><p>话费充值是最主要的充值方式，金额下限和上限较为灵活，可以是30、50的零钱，也可以是400、500的大额充值，有话费充值需求的人也比较多，相对其他的充值接口，该充值更容易成功，洗钱金额应该更大。<br>![[Pasted image 20220927120055.png|300]]</p>
+<p>![[Pasted image 20220927120208.png|300]]</p>
+<h3 id="支付宝扫码转账"><a href="#支付宝扫码转账" class="headerlink" title="支付宝扫码转账"></a>支付宝扫码转账</h3><p>支付宝的转账涉及了个人收款码和商家商品码，其中个人收款码，受害者只需要扫描对应的收款码，填写收款人的姓名即可转账成功，多为跑分收款二维码。</p>
+<h4 id="个人收款码："><a href="#个人收款码：" class="headerlink" title="个人收款码："></a>个人收款码：</h4><p>![[Pasted image 20220927120127.png|300]]<br>![[Pasted image 20220927120231.png|300]]</p>
+<h4 id="商家商品码"><a href="#商家商品码" class="headerlink" title="商家商品码"></a>商家商品码</h4><p>商家商品码就是一些小店铺的收款码，针对某个商品生成的收款码，这种情况下就和走正常购物一样，钱被流入商品交易市场，基本找不到去向。这些商家收款人码也多为跑分二维码。<br>![[Pasted image 20220927120144.png|300]]<br>![[Pasted image 20220927120247.png|300]]</p>
+<h3 id="微信红包转账"><a href="#微信红包转账" class="headerlink" title="微信红包转账"></a>微信红包转账</h3><p>扫码加好友，发送对应的订单验证码后会提示转红包给对应的商家或个人，这种大量是未实名的企业用户。这个过程需要加对方的微信，小编也尝试加了几个，加上之后对方也是言简意赅，直接问码，也就是下方付款订单的验证码，他们“验码”之后让你发对应金额的红包，这种很难确定是黑产团伙还是某个利益团伙。<br>![[Pasted image 20220928140643.png|300]]</p>
+<p>![[Pasted image 20220928140705.png|300]]<br>![[Pasted image 20220928141628.png|300]]</p>
+<p>![[Pasted image 20220928140930.png|300]]<br>下面这个添加后，会发你支付宝的收款码，让你转账，而且不止一个支付宝收款码，这些支付宝的收款码又包含了商家码和个人码。总之就是增加金钱中转次数，让洗钱过程更加隐蔽。<br>![[Pasted image 20220928140957.png|300]]<br>![[Pasted image 20220928141140.png|300]]<br>![[Pasted image 20220928141147.png|300]]</p>
+<h2 id="真优惠还是洗钱？"><a href="#真优惠还是洗钱？" class="headerlink" title="真优惠还是洗钱？"></a>真优惠还是洗钱？</h2><p>小编在此次分析中也找了很多资料，某乎上也有博主揭露过这种洗钱方式，根据博主写的，有些棋牌网站专门会提供所谓的“话费”上分，所谓上分就是将钱换成对应的游戏筹码。</p>
+<p>这里提到上分，我之前还有文章提到过“跑分”也是类似，就是专门拿一些店铺或者个人的收款码来洗钱，可以看看我之前的文章：<a href="https://mp.weixin.qq.com/s/ZlnUszZADQlr4avbxHNVOg">https://mp.weixin.qq.com/s/ZlnUszZADQlr4avbxHNVOg</a></p>
+<p>这个充值过程就会从库中匹配金额、种类一致的待充值用户，然后将用来购买筹码的钱充值给正常用户。<br>![[Pasted image 20221008151638.png|300]]</p>
+<p>在了解这个产业链的过程中看了很多视频文章，同时也浏览了一些评论，但是评论中大多数人都觉得这是好事，便宜打折充值，何乐不为。（这里提醒一下如果你充值接口对接的上级正好是黑灰产团伙，那么你的充值可能会一直处于等待中，这个过程可能黑灰产跑路，那么你的充值将石沉大海）</p>
+<p>但是我们有没有考虑过我们在无形中助长了黑灰产的发展，可能被骗的某个人就是我们的朋友。</p>
+<h2 id="服务器简单溯源"><a href="#服务器简单溯源" class="headerlink" title="服务器简单溯源"></a>服务器简单溯源</h2><h3 id="小视频（主站）api-jt-wa-com"><a href="#小视频（主站）api-jt-wa-com" class="headerlink" title="小视频（主站）api.jt*******wa.com"></a>小视频（主站）api.jt*******wa.com</h3><p><a href="https://api.jtshuzhiwa.com/m_sns/video/apply_play_permission">https://api.jtshuzhiwa.com/m_sns/video/apply_play_permission</a><br><a href="https://api.jtshuzhiwa.com/m_game/game_list?game_ids=%5B%5D">https://api.jtshuzhiwa.com/m_game/game_list?game_ids=%5B%5D</a><br><a href="https://api.jtshuzhiwa.com/m_sns/posts?post_type=recommend">https://api.jtshuzhiwa.com/m_sns/posts?post_type=recommend</a></p>
+<p>![[Pasted image 20220928145418.png]]</p>
+<p>![[Pasted image 20220928160445.png]]</p>
+<p>![[Pasted image 20220928160254.png]]</p>
+<p>![[Pasted image 20220928160134.png]]</p>
+<h3 id="直播平台（第三方）api-s-c-com"><a href="#直播平台（第三方）api-s-c-com" class="headerlink" title="直播平台（第三方）api.s*******c.com"></a>直播平台（第三方）api.s*******c.com</h3><p><a href="https://api.s****c.com/tl/index/cache/version?appId=10005">https://api.s****c.com/tl/index/cache/version?appId=10005</a></p>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>黑灰产一直是网络安全的毒瘤，很难彻底拔除，技术在不断的发展，从一开始的收到一笔钱要通过人力从不同的提款机取出不等份额的钱来洗白，到各种跑分收款码，再到各种上分充值，洗钱的方式越来越隐秘，基本无法定位黑钱的来龙去脉。</p>
+<p>借用“差评君”的一段话“我们没有能力劝黑产们改邪归正，也没有办法用道德标准要求张三们别再选择慢充了，因为他们也是记得利益者”，但是我们可以通过更深入内幕描述来奉劝各位涉黄涉赌人员早点上岸。</p>
+<p><strong>请安装“国家反诈中心”APP。</strong></p>
+]]></content>
+      <categories>
+        <category>病毒分析</category>
+      </categories>
+      <tags>
+        <tag>病毒</tag>
+        <tag>涉黄</tag>
+        <tag>涉毒</tag>
+        <tag>诈骗</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>重放攻击防御手段</title>
+    <url>/2022/05/14/%E9%87%8D%E6%94%BE%E6%94%BB%E5%87%BB%E9%98%B2%E5%BE%A1%E6%89%8B%E6%AE%B5/</url>
+    <content><![CDATA[<h2 id="重放攻击"><a href="#重放攻击" class="headerlink" title="重放攻击"></a>重放攻击</h2><p>入侵者从网络上截取主机A发送给主机B的报文，并把由A加密的报文发送给B，使主机B误以为入侵者就是主机A，然后主机B向伪装成A的入侵者发送应当发送给A的报文。</p>
+<h3 id="防御手段"><a href="#防御手段" class="headerlink" title="防御手段"></a>防御手段</h3><p>防止重放攻击的方法是使用不重数</p>
+<h4 id="1-加随机数"><a href="#1-加随机数" class="headerlink" title="1. 加随机数"></a>1. 加随机数</h4><p>该方法优点是认证双方不需要时间同步，双方记住使用过的随机数，如发现报文中有以前使用过的随机数，就认为是重放攻击。缺点是需要额外保存使用过的随机数，若记录的时间段较长，则保存和查询的开销较大。</p>
+<h4 id="2-加时间戳"><a href="#2-加时间戳" class="headerlink" title="2. 加时间戳"></a>2. 加时间戳</h4><p>该方法优点是不用额外保存其他信息。缺点是认证双方需要准确的时间同步，同步越好，受攻击的可能性就越小。但当系统很庞大，跨越的区域较广时，要做到精确的时间同步并不是很容易。</p>
+<h4 id="3-加流水号"><a href="#3-加流水号" class="headerlink" title="3. 加流水号"></a>3. 加流水号</h4><p>就是双方在报文中添加一个逐步递增的整数，只要接收到一个不连续的流水号报文(太大或太小)，就认定有重放威胁。该方法优点是不需要时间同步，保存的信息量比随机数方式小。缺点是一旦攻击者对报文解密成功，就可以获得流水号，从而每次将流水号递增欺骗认证端。</p>
+<p>在实际中，常将方法(1)和方法(2)组合使用，这样就只需保存某个很短时间段内的所有随机数，而且时间戳的同步也不需要太精确（最通常的做法是利用时间戳+随机数字生成随机码,并入交互报文中即可）。<br>对付重放攻击除了使用本以上方法外，还可以使用挑战一应答机制和一次性口令机制，而且似乎后面两种方法在实际中使用得更广泛。</p>
+]]></content>
+      <categories>
+        <category>web防御手段</category>
+      </categories>
+      <tags>
+        <tag>重放攻击</tag>
+        <tag>防御手段</tag>
       </tags>
   </entry>
 </search>
