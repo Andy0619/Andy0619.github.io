@@ -24,192 +24,6 @@
       </tags>
   </entry>
   <entry>
-    <title>某病毒APP防护破解</title>
-    <url>/2022/05/11/blog1/</url>
-    <content><![CDATA[<p>今天星友求助一个类似杀猪盘的样本。该样本有以下几个点需要攻克：</p>
-<p>1、AndroidManifest.xml经过处理：<br><img src="/2022/05/11/blog1/1.png"><br>2、整个样本的字符串全部经过加密，解密方法名经过强混淆：<br><img src="/2022/05/11/blog1/2.png"><br>3、资源文件也经过了混淆：<br><img src="/2022/05/11/blog1/3.png"><br>4、样本伪加密：<br><img src="/2022/05/11/blog1/4.png"><br>5、样本无法安装（签名问题）：<br><img src="/2022/05/11/blog1/5.png"></p>
-<p>接下来我们来解决一下2、5两个问题。</p>
-<h3 id="样本无法安装"><a href="#样本无法安装" class="headerlink" title="样本无法安装"></a>样本无法安装</h3><p>我们看样本安装报错，提示签名问题，我们直接上Xposed模块:<a href="https://github.com/Xposed-Modules-Repo/com.coderstory.toolkit">核心破解</a><br>核心破解的主要功能：<br>1、允许降级安装应用<br>2、允许安装签名错误的apk<br>3、允许在使用不同签名的情况下覆盖安装<br>缺点：<br>当前版本只支持安卓10-12<br><img src="/2022/05/11/blog1/6.png"></p>
-<h3 id="强混淆方法hook、字符串解密"><a href="#强混淆方法hook、字符串解密" class="headerlink" title="强混淆方法hook、字符串解密"></a>强混淆方法hook、字符串解密</h3><p><img src="/2022/05/11/blog1/7.png"><br>接下来我们hook一下这个加密方法，简单的hook我们直接使用objection即可：</p>
-<p>hook 监测该类，可以看到只有这一个方法：</p>
-<figure class="highlight js"><table><tr><td class="code"><pre><span class="line">objection -g com.<span class="property">biaoqyun</span>.<span class="property">tongchengaglao</span> explore</span><br><span class="line">android hooking watch <span class="keyword">class</span> <span class="title class_">b6p</span>.<span class="property">alur0e</span>.<span class="property">fmjoi</span></span><br></pre></td></tr></table></figure>
-<p><img src="/2022/05/11/blog1/8.png"><br>我们直接复制，hook该方法，报错，找不到这个方法：<br><img src="/2022/05/11/blog1/9.png"><br>这样看直接hook这个方法显然是有问题，因为其中包含了各种字符，frida在解析这个方法时由于乱码的原因，无法正常解析道这个类，这样看来我们只能想其他办法了。</p>
-<p>曲线救国，可以试试hook它的上层调用a.c，打印对应的参数和返回值来看，其中的参数即是解密后的字符串。  </p>
-<p>得到结果如下：</p>
-<figure class="highlight js"><table><tr><td class="code"><pre><span class="line">android hooking watch class_method com.<span class="property">g</span></span><br><span class="line">aoyuan.<span class="property">mianshu</span>.<span class="property">k</span>.<span class="property">c</span>.<span class="property">a</span> --dump-args --dump-<span class="keyword">return</span></span><br></pre></td></tr></table></figure>
-<p><img src="/2022/05/11/blog1/10.png"><br>从上图我们可以看到有RSA密钥，以及返回的一些URL。</p>
-<p>这样的缺点是只能知道这一块的字符串解密内容，其他的还是无法定位，这样看还是需要hook这个混淆的方法。</p>
-<p>我们的大佬提供了解决方法，可以hook混淆方法，展示一下hook到的结果：<br><img src="/2022/05/11/blog1/11.png"><br>我们也可以根据打印出来的字符串在jadx中搜索对应的字符串然后继续分析代码</p>
-<p>hook代码如下：</p>
-<figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">perform</span>(</span><br><span class="line">    <span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line"> </span><br><span class="line">        <span class="keyword">var</span> targetClass = <span class="string">&quot;b6p.alur0e.fmjoi&quot;</span>;</span><br><span class="line"> </span><br><span class="line">        <span class="keyword">var</span> hookCls = <span class="title class_">Java</span>.<span class="title function_">use</span>(targetClass);</span><br><span class="line">        <span class="keyword">var</span> methods = hookCls.<span class="property">class</span>.<span class="title function_">getDeclaredMethods</span>();</span><br><span class="line"> </span><br><span class="line"></span><br><span class="line">        <span class="keyword">var</span> methodname = <span class="built_in">encodeURIComponent</span>(methods[<span class="number">0</span>].<span class="title function_">toString</span>().<span class="title function_">replace</span>(<span class="regexp">/^.*?\.([^\s\.\(\)]+)\(.*?$/</span>, <span class="string">&quot;$1&quot;</span>));<span class="comment">//对字符串进行js自己编码</span></span><br><span class="line"></span><br><span class="line"> </span><br><span class="line">        hookCls[<span class="built_in">decodeURIComponent</span>(methodname)]<span class="comment">//使用的时候再去解码</span></span><br><span class="line">            .<span class="property">implementation</span> = <span class="keyword">function</span> (<span class="params">x</span>) &#123;</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;参数：&quot;</span>, x);</span><br><span class="line">                <span class="keyword">var</span> result = <span class="variable language_">this</span>[<span class="built_in">decodeURIComponent</span>(methodname)](x);</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;返回值：&quot;</span>,result);</span><br><span class="line">                <span class="keyword">return</span> result;</span><br><span class="line">            &#125;</span><br><span class="line">    &#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>]]></content>
-      <categories>
-        <category>病毒分析</category>
-      </categories>
-      <tags>
-        <tag>病毒</tag>
-        <tag>防护</tag>
-        <tag>加固</tag>
-        <tag>混淆</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>小米手机—Redmi K20 Pro刷Magisk、Xposed等环境</title>
-    <url>/2022/05/11/blog2/</url>
-    <content><![CDATA[<h3 id="手机解锁BL"><a href="#手机解锁BL" class="headerlink" title="手机解锁BL"></a>手机解锁BL</h3><p>1、我们到指定网站<a href="http://www.miui.com/unlock/download.html">http://www.miui.com/unlock/download.html</a> 下载解锁工具，得到解锁工具包后解压双击运行miflash_unlock.exe，登录自己账号。<br><img src="/2022/05/11/blog2/1.png"></p>
-<p>2、手机关机状态下长按手机的“音量减键+电源键”，进入手机FASTBOOT模式（有个兔子的界面就是），然后数据线插入手机和电脑连接，如下显示已连接手机后，我们点击解锁即可等待解锁。<br><img src="/2022/05/11/blog2/2.png"><br><img src="/2022/05/11/blog2/3.png"></p>
-<h3 id="刷入Magisk"><a href="#刷入Magisk" class="headerlink" title="刷入Magisk"></a>刷入Magisk</h3><p>高版本的Magisk可以通过卡刷和直接安装，本次我们按照<a href="https://topjohnwu.github.io/Magisk/install.html#samsung-system-as-root">官网介绍</a>来安装</p>
-<p>1、首先我们要下载对应的系统镜像，因为我们需要boot.img文件，小米手机可到<a href="https://xiaomirom.com/">下载 小米ROM</a>下载，找到自己机型对应的系统版本即可，要和手机系统版本号一致。下载后需要解压提取其中boot.img文件，将文件push到我们的手机（adb push）。<br><img src="/2022/05/11/blog2/4.png"></p>
-<p>2、我们还需要去<a href="https://github.com/topjohnwu/Magisk">Magisk github</a>下载安装文件。<br><img src="/2022/05/11/blog2/5.png"></p>
-<p>3、将我们下载的Magisk安装包安装后打开，下图是我们已经安装好的Magisk，我们点击安装——下一步——选择并修补一个文件——选择我们要push到手机的boot.img文件即可<br><img src="/2022/05/11/blog2/6.png" width="50%"></p>
-<img src="/2022/05/11/blog2/7.png" width="50%">
-
-<img src="/2022/05/11/blog2/8.png" width="50%">
-
-<img src="/2022/05/11/blog2/9.png" width="50%">
-
-<p>4、接着上步，会生成一个magisk_patched_random_strings.img文件，我们将该文件copy到自己电脑即可（adb pull）<br><img src="/2022/05/11/blog2/10.png" width="50%"></p>
-<p>5、接下来我们将copy到电脑的magisk_patched_random_strings.img文件重新刷入手机即可（还是boot分区）,最后重启即可。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">fastboot flash boot magisk_patched_random_strings.img</span><br><span class="line">fastboot reboot</span><br></pre></td></tr></table></figure>
-
-<h3 id="其他工具环境"><a href="#其他工具环境" class="headerlink" title="其他工具环境"></a>其他工具环境</h3><h4 id="LSPosed和Root-hide"><a href="#LSPosed和Root-hide" class="headerlink" title="LSPosed和Root hide"></a>LSPosed和Root hide</h4><p>我安装的是最新版的Magisk（V24），废除了之前的Riru,采用Zygisk替代<br><img src="/2022/05/11/blog2/11.png" width="50%"><br>我们打开后就可以下载对应的模块达到对应的目的，这个版本模块无法在Magisk里面下载更新，只能自己下载zip包本地安装，主要有几个</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Zygisk-LSPosed——替代之前的LSPosed、riru-edxposed</span><br><span class="line">Shamiko（可以和frida共存）——替代之前的riru-momohide、hide</span><br></pre></td></tr></table></figure>
-<img src="/2022/05/11/blog2/12.png" width="50%">
-
-<h4 id="Momo"><a href="#Momo" class="headerlink" title="Momo"></a>Momo</h4><p>这个工具主要就是检测我们手机都有哪些风险环境<br><img src="/2022/05/11/blog2/13.png" width="50%"></p>
-<h3 id="Frida"><a href="#Frida" class="headerlink" title="Frida"></a>Frida</h3><p>这个不用过多介绍，直接官网下载push到手机，提权即可使用，(当然Magisk里面也有对应的插件)如果被检测，可以试试<code>strong-frida</code>，这里就不过多介绍了。</p>
-<h3 id="安装burp证书"><a href="#安装burp证书" class="headerlink" title="安装burp证书"></a>安装burp证书</h3><p><img src="/2022/05/11/blog2/14.png"><br><img src="/2022/05/11/blog2/15.png"><br>导出的.crt文件push到手机上<br>我们在小米手机设置也搜索证书，选择要安装的证书安装，这样安装后应该在用户凭据下，我们需要把它移到系统凭据下，这时候就需要借助<code>Magisk</code>的<code>Move_Certificates</code>模块<br><img src="/2022/05/11/blog2/16.png" width="50%"><br><img src="/2022/05/11/blog2/17.png" width="50%"><br>我们找到<a href="https://github.com/Magisk-Modules-Repo/movecert"><code>Move_Certificates</code></a>模块安装后重启手机即可<br>重启手机后我们在设置里面搜索信任的凭证，可以看到我们的证书已经在系统凭据下了。<br><img src="/2022/05/11/blog2/18.png" width="50%"></p>
-<p>这样我们就可以正常抓包了，但是对于有证书校验的客户端，我们还是需要配合<code>JustMePlush</code>、<a href="https://github.com/Fuzion24/JustTrustMe"><code>JustTrustMe</code></a>、<a href="https://github.com/ac-pm/SSLUnpinning_Xposed"><code>SSLUnpinning</code></a>等hook工具</p>
-]]></content>
-      <categories>
-        <category>刷机</category>
-        <category>逆向环境</category>
-      </categories>
-      <tags>
-        <tag>刷机</tag>
-        <tag>小米</tag>
-        <tag>Magisk</tag>
-        <tag>Xposed</tag>
-        <tag>burp证书</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Android加固little总结</title>
-    <url>/2022/05/12/blog3/</url>
-    <content><![CDATA[<h1 id="Android软件加固"><a href="#Android软件加固" class="headerlink" title="Android软件加固"></a>Android软件加固</h1><h2 id="Android软件加固概述"><a href="#Android软件加固概述" class="headerlink" title="Android软件加固概述"></a>Android软件加固概述</h2><p>从2012年开始，移动互联网进入快速发展阶段，Android App开发热潮的兴起，也推动了Android平台软件保护技术的发展。</p>
-<ul>
-<li>  <strong>为何做加固</strong>   </li>
-</ul>
-<ol>
-<li> 保护核心代码  </li>
-<li> 防止营销作弊的手段   </li>
-<li> 防止代码被篡改 …</li>
-</ol>
-<h2 id="加固代际"><a href="#加固代际" class="headerlink" title="加固代际"></a>加固代际</h2><p>根据不同的理解，现在加固代际基本上可以按照五代或者三代去区分。</p>
-<h3 id="第一代：动态加载类"><a href="#第一代：动态加载类" class="headerlink" title="第一代：动态加载类"></a>第一代：动态加载类</h3><p>Apk中没有完整原始的Dex，需要运行时动态的加载到内存中</p>
-<h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><ul>
-<li><p>  落地加载<br>我们拿到需要加密的Apk和自己的壳程序Apk，然后用加密算法对源Apk进行加密再将壳Apk进行合并得到新的Dex文件，最后替换壳程序中的dex文件即可，得到新的Apk,那么这个新的Apk我们也叫作脱壳程序Apk.他已经不是一个完整意义上的Apk程序了，他的主要工作是：负责解密源Apk.然后加载Apk,让其正常运行起来。运行时首先将我们的Dex文件或者Apk文件解密，然后利用DexClassLoader加载器将其加载进内存中，然后利用反射加载待加固的Apk的Appkication，然后运行待加固程序即可。<br><img src="/2022/05/12/blog3/1.png"><br><img src="/2022/05/12/blog3/2.png"></p>
-</li>
-<li><p>  不落地加载<br>落地加载将Dex文件解密出来会保存到文件中，再通过DexClassLoader加载进内存中，而不落地加载直接重写DexClassLoader使其可以直接加载字节数组，避免写入文件中。我们要做的是重写DexClassLoader，而这涉及到三个函数defineClass、findClass、loadClass，在一个类被加载的时候，会先后调用这三个函数加载一个类，所以我们需要重写这三个函数。系统的DexClassLoader加载Dex进入内存的也必然是通过字节加载的，而在系统so中的libdvm.so中的openDexFile可以直接加载Dex文件，那么现在清楚了，我们可以通过编写so文件调用openDexFile函数加载Dex字节数组，值得注意的是，openDexFile函数返回值为一个int类型的cookie，可以简单理解成一个dex文件的’身份码’，通过该’身份码’即可操控这个dex文件,至于怎么调用该函数，可以通过dlopen和dlsym函数调用。</p>
-</li>
-</ul>
-<p><img src="/2022/05/12/blog3/3.png"></p>
-<h4 id="优劣"><a href="#优劣" class="headerlink" title="优劣"></a>优劣</h4><ul>
-<li><p>  优点<br>比较容易实现，无明显的兼容性问题 能有效对抗静态分析和二次打包</p>
-</li>
-<li><p>  缺点<br>启动时需要进行大量的解密运算，容易造成卡死的情况 在内存中的数据为完整的Dex，通过动态调试Dump内存即可获取完整的Dex</p>
-</li>
-</ul>
-<h4 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/4.png"><br>Dex字符串加密 资源加密 对抗反编译 对抗调试 Dex动态加载 so加密</p>
-<h3 id="第二代：函数抽取类"><a href="#第二代：函数抽取类" class="headerlink" title="第二代：函数抽取类"></a>第二代：函数抽取类</h3><h4 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h4><p>主要分为两个步骤指令抽取和指令还原</p>
-<ul>
-<li>  指令抽取<br>解析原始Dex文件格式，保存所有方法的代码结构体信息，通过传入需要置空指令的方法和类名，检索到其代码结构体信息。通过方法的代码结构体信息获取指令个数和偏移地址，构造空指令集，然后覆盖原始指令，重新计算dex文件的checksum和signature信息，回写到头部信息中。</li>
-</ul>
-<p><img src="/2022/05/12/blog3/5.png"></p>
-<p><img src="/2022/05/12/blog3/6.png"></p>
-<ul>
-<li>  指令还原<br>native层hook系统函数dexFindClass，获取类结构体信息（dexFindClass函数用于查找类的DexClassDef结构），获取类中所有的方法信息，通过指定方法名进行过滤，获取该方法的代码结构体信息，获取该方法被抽取的指令集，修改方法对应的内存地址为可读属性，直接进行指令还原。</li>
-</ul>
-<h4 id="优劣-1"><a href="#优劣-1" class="headerlink" title="优劣"></a>优劣</h4><ul>
-<li><p>  优点<br>加密粒度变小，加密技术从Dex文件级变为方法级 按需解密，解密操作延迟到某类方法被执行前，如果方法不被执行，则不被解密 解密后的代码在内存不连续，克服了内存被Dump的缺点，有效保护了移动客户端的Java代码</p>
-</li>
-<li><p>  缺点<br>使用大量的虚拟机内部结构，会出现兼容性问题，无法保护所有方法 无法对抗自定义虚拟机 它跟虚拟机的JIT优化出现冲突，达不到最佳的性能表现</p>
-</li>
-</ul>
-<h4 id="特点-1"><a href="#特点-1" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/7.png"></p>
-<p>除一代有的特点外 内存中无完整、连续的Dex so代码混淆、膨胀</p>
-<h3 id="第三代：VMP、Dex2C类"><a href="#第三代：VMP、Dex2C类" class="headerlink" title="第三代：VMP、Dex2C类"></a>第三代：VMP、Dex2C类</h3><h4 id="原理-2"><a href="#原理-2" class="headerlink" title="原理"></a>原理</h4><ul>
-<li>  VMP<br>执行到关键代码时进入壳so执行，关于这一点，不同的厂商有着不同的做法，比如把关键函数变成native函数，在壳so中动态或者静态注册</li>
-</ul>
-<p><img src="/2022/05/12/blog3/8.png"></p>
-<p>再比如更改关键方法的方法体</p>
-<p><img src="/2022/05/12/blog3/9.png"></p>
-<p>无论哪种方法其实都是为了能让壳函数代替原函数去执行 当执行该函数的指令时，解析出指令的OpCode,通过一个巨大的switch case找到处理对应OpCode的函数，然后执行</p>
-<p><img src="/2022/05/12/blog3/10.png"></p>
-<p>简单讲就是壳将原本的指令进行一次封装，将原本的指令转换为另一种表现形式</p>
-<ul>
-<li>  Dex2C<br>首先也是将关键代码注册为native函数，主要借助于JNI反射技术，将Java层的方法全部反射为native层，增大分析难度。之后再通过混淆、字符串加密等操作生成so，最后将so进行加固保护。</li>
-</ul>
-<h4 id="优劣-2"><a href="#优劣-2" class="headerlink" title="优劣"></a>优劣</h4><ul>
-<li><p>  优点<br>加固强度高，目前没有公开的脱壳工具 经过混淆加密后很难还原原函数</p>
-</li>
-<li><p>  缺点<br>效率较低，启动、运行时都比较耗时稳定性、可控性差，容易产生崩溃</p>
-</li>
-</ul>
-<h4 id="特点-2"><a href="#特点-2" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/11.png"></p>
-<p>除一、二代全部特点外 so代码虚拟化 对抗之前所有的脱壳方法</p>
-<h3 id="so加密"><a href="#so加密" class="headerlink" title="so加密"></a>so加密</h3><h4 id="section加密"><a href="#section加密" class="headerlink" title="section加密"></a>section加密</h4><ul>
-<li>  原理<br>将关键方法，存放在自定义的section中，通过解析每个section，将我们自定义的section进行加密。因为so在加载时会优先加载.init_array，所以将解密方法放在.init_array中，获取内存中各个section的起始地址和大小，将需要解密的section还原。</li>
-</ul>
-<h4 id="函数加密"><a href="#函数加密" class="headerlink" title="函数加密"></a>函数加密</h4><ul>
-<li>  原理<br>解析so，根据方法名找到指定的方法，将方法进行加密。加载so时，获取指定方法的地址，通过解密方法将指定方法解密。</li>
-</ul>
-<h4 id="特点-3"><a href="#特点-3" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/12.png"></p>
-<p><img src="/2022/05/12/blog3/13.png"></p>
-<p>由于原本的指令已经被加密成其他的字节，IDA等静态分析工具中会出现大段无法识别的代码</p>
-<h2 id="各厂商特征"><a href="#各厂商特征" class="headerlink" title="各厂商特征"></a>各厂商特征</h2><p>除此外还有很多大佬们可以自行总结</p>
-<h3 id="某梆"><a href="#某梆" class="headerlink" title="某梆"></a>某梆</h3><p>lib/libDexHelper.so、lib/libDexHelper-x86.so、</p>
-<h3 id="某加密"><a href="#某加密" class="headerlink" title="某加密"></a>某加密</h3><p>assets/ijiami.ajm、assets/ijiami.dat、assets/ijm_lib/libexec.so、assets/ijm_lib/libexecmain.so</p>
-<h3 id="某企鹅"><a href="#某企鹅" class="headerlink" title="某企鹅"></a>某企鹅</h3><p>lib/libshell-super.2019.so、lib/libshella-4.1.0.29.so</p>
-<h3 id="某数字"><a href="#某数字" class="headerlink" title="某数字"></a>某数字</h3><p>assets/libjiagu.so、assets/libjiagu_x86.so</p>
-<h3 id="某迦"><a href="#某迦" class="headerlink" title="某迦"></a>某迦</h3><p>lib/libxloader.so</p>
-<p>assets/libvdog、assets/libvdog64、assets/libvdog-x86</p>
-<h3 id="某付盾"><a href="#某付盾" class="headerlink" title="某付盾"></a>某付盾</h3><p>lib/libegis.so、lib/libegis-x86.so</p>
-<h2 id="脱壳工具"><a href="#脱壳工具" class="headerlink" title="脱壳工具"></a>脱壳工具</h2><h3 id="FRIDA-DEXDump"><a href="#FRIDA-DEXDump" class="headerlink" title="FRIDA-DEXDump"></a>FRIDA-DEXDump</h3><h4 id="原理-3"><a href="#原理-3" class="headerlink" title="原理"></a>原理</h4><p>通过Frida在内存中搜索dex\n035，因为Dex的头部都会存在一个dex\n035的模数，所以通过在内存中搜索dex\n035可以搜索到Dex文件。对于一些Dex它们被抹去了头部信息，对于这样的情况，FRIDA-DEXDump也提供了对应的方法，通过遍历当前进程中所有可以读的内存段，通过判断这个段的大小和Dex文件中一些关键区域的关系可以判断是否为一个Dex。</p>
-<h4 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h4><p>在FRIDA-DEXDumpGitHub中下载代码到本地或者通过<code>pip3 install frida-dexdump</code> 安装</p>
-<p><img src="/2022/05/12/blog3/14.png"></p>
-<p>用法就是首先打开，我们需要脱壳的软件，然后执行<code>python main.py -d</code>程序执行开始检索内存中的Dex</p>
-<p><img src="/2022/05/12/blog3/15.png"></p>
-<p>检索到后会保存在SavePath对应的目录下</p>
-<p>也可以通过<code>python main.py -h</code>查看它的其他使用方法</p>
-<p><img src="/2022/05/12/blog3/16.png"></p>
-<p>最终得到它脱出来的Dex，可以看下它脱壳效果</p>
-<p><img src="/2022/05/12/blog3/17.png"></p>
-<h3 id="Youpk"><a href="#Youpk" class="headerlink" title="Youpk"></a>Youpk</h3><h4 id="原理-4"><a href="#原理-4" class="headerlink" title="原理"></a>原理</h4><p>从ClassLinker中遍历所有DexFile对象，在虚拟机中Dex文件都用DexFile对象来表示，并Dump出所有Dex文件。此时只是整体Dump，Dex中的方法还未还原。遍历DexFile中的ClassDef结构，获取到所有Class，主动调用Class中的所有的方法，让程序强制走switch解释器执行，在解释器中添加Hook代码，当方法执行时自动保存CodeItem。根据保存的CodeItem和Dump下来的Dex进行合并，还原Dex中被抽取的指令。</p>
-<h4 id="使用-1"><a href="#使用-1" class="headerlink" title="使用"></a>使用</h4><p>首先下载刷机包和还原工具，目前仅支持刷pixel 1手机</p>
-<p><img src="/2022/05/12/blog3/18.png"></p>
-<p>解压相关的镜像，<code>fastboot flash xxx /Download/xxx.img</code>依次刷入</p>
-<p><img src="/2022/05/12/blog3/19.png"></p>
-<p>配置待脱壳的App包名<code>adb shell &quot;echo com.xxx &gt;&gt; /data/local/tmp/unpacker.config&quot;</code></p>
-<p>启动Apk等待脱壳，每隔10秒将自动重新脱壳(已完全dump的dex将被忽略), 当日志打印unpack end时脱壳完成</p>
-<p>dump文件路径为/data/data/包名/unpacker，使用adb命令将文件pull出</p>
-<p><img src="/2022/05/12/blog3/20.png"></p>
-<p>使用dexfixer.jar修复Dex，<code>java -jar dexfixer.jar /path/unpacker /path/output</code></p>
-<p>最后我们对比一下还原前后的代码</p>
-<p>还原前</p>
-<p><img src="/2022/05/12/blog3/21.png"></p>
-<p>还原后</p>
-<p><img src="/2022/05/12/blog3/22.png"></p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文简单地总结了一下Android加固的背景和发展历史，也介绍了一些目前常见的脱壳工具。对于so加密的情况，目前也有许多方法应对，比如ida动态调试dump内存中的so，GG模拟器dump内存，frida dump so，unidbg等等。对于混淆的so，也有jnitrace，unidbg，还有hluwa大佬的大作obpo等工具辅助我们分析。除此以外还有还有一些优秀的脱壳工具如Fart等，我也没有再做介绍了。总之感谢这些大佬们的努力和开源，没有你们就没有白嫖的我们，哈哈…</p>
-]]></content>
-      <categories>
-        <category>Android防护手段</category>
-      </categories>
-      <tags>
-        <tag>防护</tag>
-        <tag>加固</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>hexo&amp;github 搭建属于自己的博客</title>
     <url>/2022/05/12/blog4/</url>
     <content><![CDATA[<h1 id="hexo-amp-github-搭建博客（保姆级）"><a href="#hexo-amp-github-搭建博客（保姆级）" class="headerlink" title="hexo&amp;github 搭建博客（保姆级）"></a>hexo&amp;github 搭建博客（保姆级）</h1><h2 id="安装-Hexo"><a href="#安装-Hexo" class="headerlink" title="安装 Hexo"></a>安装 Hexo</h2><ol>
@@ -399,6 +213,192 @@
       </tags>
   </entry>
   <entry>
+    <title>某病毒APP防护破解</title>
+    <url>/2022/05/11/blog1/</url>
+    <content><![CDATA[<p>今天星友求助一个类似杀猪盘的样本。该样本有以下几个点需要攻克：</p>
+<p>1、AndroidManifest.xml经过处理：<br><img src="/2022/05/11/blog1/1.png"><br>2、整个样本的字符串全部经过加密，解密方法名经过强混淆：<br><img src="/2022/05/11/blog1/2.png"><br>3、资源文件也经过了混淆：<br><img src="/2022/05/11/blog1/3.png"><br>4、样本伪加密：<br><img src="/2022/05/11/blog1/4.png"><br>5、样本无法安装（签名问题）：<br><img src="/2022/05/11/blog1/5.png"></p>
+<p>接下来我们来解决一下2、5两个问题。</p>
+<h3 id="样本无法安装"><a href="#样本无法安装" class="headerlink" title="样本无法安装"></a>样本无法安装</h3><p>我们看样本安装报错，提示签名问题，我们直接上Xposed模块:<a href="https://github.com/Xposed-Modules-Repo/com.coderstory.toolkit">核心破解</a><br>核心破解的主要功能：<br>1、允许降级安装应用<br>2、允许安装签名错误的apk<br>3、允许在使用不同签名的情况下覆盖安装<br>缺点：<br>当前版本只支持安卓10-12<br><img src="/2022/05/11/blog1/6.png"></p>
+<h3 id="强混淆方法hook、字符串解密"><a href="#强混淆方法hook、字符串解密" class="headerlink" title="强混淆方法hook、字符串解密"></a>强混淆方法hook、字符串解密</h3><p><img src="/2022/05/11/blog1/7.png"><br>接下来我们hook一下这个加密方法，简单的hook我们直接使用objection即可：</p>
+<p>hook 监测该类，可以看到只有这一个方法：</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line">objection -g com.<span class="property">biaoqyun</span>.<span class="property">tongchengaglao</span> explore</span><br><span class="line">android hooking watch <span class="keyword">class</span> <span class="title class_">b6p</span>.<span class="property">alur0e</span>.<span class="property">fmjoi</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2022/05/11/blog1/8.png"><br>我们直接复制，hook该方法，报错，找不到这个方法：<br><img src="/2022/05/11/blog1/9.png"><br>这样看直接hook这个方法显然是有问题，因为其中包含了各种字符，frida在解析这个方法时由于乱码的原因，无法正常解析道这个类，这样看来我们只能想其他办法了。</p>
+<p>曲线救国，可以试试hook它的上层调用a.c，打印对应的参数和返回值来看，其中的参数即是解密后的字符串。  </p>
+<p>得到结果如下：</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line">android hooking watch class_method com.<span class="property">g</span></span><br><span class="line">aoyuan.<span class="property">mianshu</span>.<span class="property">k</span>.<span class="property">c</span>.<span class="property">a</span> --dump-args --dump-<span class="keyword">return</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2022/05/11/blog1/10.png"><br>从上图我们可以看到有RSA密钥，以及返回的一些URL。</p>
+<p>这样的缺点是只能知道这一块的字符串解密内容，其他的还是无法定位，这样看还是需要hook这个混淆的方法。</p>
+<p>我们的大佬提供了解决方法，可以hook混淆方法，展示一下hook到的结果：<br><img src="/2022/05/11/blog1/11.png"><br>我们也可以根据打印出来的字符串在jadx中搜索对应的字符串然后继续分析代码</p>
+<p>hook代码如下：</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">perform</span>(</span><br><span class="line">    <span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line"> </span><br><span class="line">        <span class="keyword">var</span> targetClass = <span class="string">&quot;b6p.alur0e.fmjoi&quot;</span>;</span><br><span class="line"> </span><br><span class="line">        <span class="keyword">var</span> hookCls = <span class="title class_">Java</span>.<span class="title function_">use</span>(targetClass);</span><br><span class="line">        <span class="keyword">var</span> methods = hookCls.<span class="property">class</span>.<span class="title function_">getDeclaredMethods</span>();</span><br><span class="line"> </span><br><span class="line"></span><br><span class="line">        <span class="keyword">var</span> methodname = <span class="built_in">encodeURIComponent</span>(methods[<span class="number">0</span>].<span class="title function_">toString</span>().<span class="title function_">replace</span>(<span class="regexp">/^.*?\.([^\s\.\(\)]+)\(.*?$/</span>, <span class="string">&quot;$1&quot;</span>));<span class="comment">//对字符串进行js自己编码</span></span><br><span class="line"></span><br><span class="line"> </span><br><span class="line">        hookCls[<span class="built_in">decodeURIComponent</span>(methodname)]<span class="comment">//使用的时候再去解码</span></span><br><span class="line">            .<span class="property">implementation</span> = <span class="keyword">function</span> (<span class="params">x</span>) &#123;</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;参数：&quot;</span>, x);</span><br><span class="line">                <span class="keyword">var</span> result = <span class="variable language_">this</span>[<span class="built_in">decodeURIComponent</span>(methodname)](x);</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;返回值：&quot;</span>,result);</span><br><span class="line">                <span class="keyword">return</span> result;</span><br><span class="line">            &#125;</span><br><span class="line">    &#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>病毒分析</category>
+      </categories>
+      <tags>
+        <tag>病毒</tag>
+        <tag>防护</tag>
+        <tag>加固</tag>
+        <tag>混淆</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>小米手机—Redmi K20 Pro刷Magisk、Xposed等环境</title>
+    <url>/2022/05/11/blog2/</url>
+    <content><![CDATA[<h3 id="手机解锁BL"><a href="#手机解锁BL" class="headerlink" title="手机解锁BL"></a>手机解锁BL</h3><p>1、我们到指定网站<a href="http://www.miui.com/unlock/download.html">http://www.miui.com/unlock/download.html</a> 下载解锁工具，得到解锁工具包后解压双击运行miflash_unlock.exe，登录自己账号。<br><img src="/2022/05/11/blog2/1.png"></p>
+<p>2、手机关机状态下长按手机的“音量减键+电源键”，进入手机FASTBOOT模式（有个兔子的界面就是），然后数据线插入手机和电脑连接，如下显示已连接手机后，我们点击解锁即可等待解锁。<br><img src="/2022/05/11/blog2/2.png"><br><img src="/2022/05/11/blog2/3.png"></p>
+<h3 id="刷入Magisk"><a href="#刷入Magisk" class="headerlink" title="刷入Magisk"></a>刷入Magisk</h3><p>高版本的Magisk可以通过卡刷和直接安装，本次我们按照<a href="https://topjohnwu.github.io/Magisk/install.html#samsung-system-as-root">官网介绍</a>来安装</p>
+<p>1、首先我们要下载对应的系统镜像，因为我们需要boot.img文件，小米手机可到<a href="https://xiaomirom.com/">下载 小米ROM</a>下载，找到自己机型对应的系统版本即可，要和手机系统版本号一致。下载后需要解压提取其中boot.img文件，将文件push到我们的手机（adb push）。<br><img src="/2022/05/11/blog2/4.png"></p>
+<p>2、我们还需要去<a href="https://github.com/topjohnwu/Magisk">Magisk github</a>下载安装文件。<br><img src="/2022/05/11/blog2/5.png"></p>
+<p>3、将我们下载的Magisk安装包安装后打开，下图是我们已经安装好的Magisk，我们点击安装——下一步——选择并修补一个文件——选择我们要push到手机的boot.img文件即可<br><img src="/2022/05/11/blog2/6.png" width="50%"></p>
+<img src="/2022/05/11/blog2/7.png" width="50%">
+
+<img src="/2022/05/11/blog2/8.png" width="50%">
+
+<img src="/2022/05/11/blog2/9.png" width="50%">
+
+<p>4、接着上步，会生成一个magisk_patched_random_strings.img文件，我们将该文件copy到自己电脑即可（adb pull）<br><img src="/2022/05/11/blog2/10.png" width="50%"></p>
+<p>5、接下来我们将copy到电脑的magisk_patched_random_strings.img文件重新刷入手机即可（还是boot分区）,最后重启即可。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">fastboot flash boot magisk_patched_random_strings.img</span><br><span class="line">fastboot reboot</span><br></pre></td></tr></table></figure>
+
+<h3 id="其他工具环境"><a href="#其他工具环境" class="headerlink" title="其他工具环境"></a>其他工具环境</h3><h4 id="LSPosed和Root-hide"><a href="#LSPosed和Root-hide" class="headerlink" title="LSPosed和Root hide"></a>LSPosed和Root hide</h4><p>我安装的是最新版的Magisk（V24），废除了之前的Riru,采用Zygisk替代<br><img src="/2022/05/11/blog2/11.png" width="50%"><br>我们打开后就可以下载对应的模块达到对应的目的，这个版本模块无法在Magisk里面下载更新，只能自己下载zip包本地安装，主要有几个</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Zygisk-LSPosed——替代之前的LSPosed、riru-edxposed</span><br><span class="line">Shamiko（可以和frida共存）——替代之前的riru-momohide、hide</span><br></pre></td></tr></table></figure>
+<img src="/2022/05/11/blog2/12.png" width="50%">
+
+<h4 id="Momo"><a href="#Momo" class="headerlink" title="Momo"></a>Momo</h4><p>这个工具主要就是检测我们手机都有哪些风险环境<br><img src="/2022/05/11/blog2/13.png" width="50%"></p>
+<h3 id="Frida"><a href="#Frida" class="headerlink" title="Frida"></a>Frida</h3><p>这个不用过多介绍，直接官网下载push到手机，提权即可使用，(当然Magisk里面也有对应的插件)如果被检测，可以试试<code>strong-frida</code>，这里就不过多介绍了。</p>
+<h3 id="安装burp证书"><a href="#安装burp证书" class="headerlink" title="安装burp证书"></a>安装burp证书</h3><p><img src="/2022/05/11/blog2/14.png"><br><img src="/2022/05/11/blog2/15.png"><br>导出的.crt文件push到手机上<br>我们在小米手机设置也搜索证书，选择要安装的证书安装，这样安装后应该在用户凭据下，我们需要把它移到系统凭据下，这时候就需要借助<code>Magisk</code>的<code>Move_Certificates</code>模块<br><img src="/2022/05/11/blog2/16.png" width="50%"><br><img src="/2022/05/11/blog2/17.png" width="50%"><br>我们找到<a href="https://github.com/Magisk-Modules-Repo/movecert"><code>Move_Certificates</code></a>模块安装后重启手机即可<br>重启手机后我们在设置里面搜索信任的凭证，可以看到我们的证书已经在系统凭据下了。<br><img src="/2022/05/11/blog2/18.png" width="50%"></p>
+<p>这样我们就可以正常抓包了，但是对于有证书校验的客户端，我们还是需要配合<code>JustMePlush</code>、<a href="https://github.com/Fuzion24/JustTrustMe"><code>JustTrustMe</code></a>、<a href="https://github.com/ac-pm/SSLUnpinning_Xposed"><code>SSLUnpinning</code></a>等hook工具</p>
+]]></content>
+      <categories>
+        <category>刷机</category>
+        <category>逆向环境</category>
+      </categories>
+      <tags>
+        <tag>刷机</tag>
+        <tag>小米</tag>
+        <tag>Magisk</tag>
+        <tag>Xposed</tag>
+        <tag>burp证书</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Android加固little总结</title>
+    <url>/2022/05/12/blog3/</url>
+    <content><![CDATA[<h1 id="Android软件加固"><a href="#Android软件加固" class="headerlink" title="Android软件加固"></a>Android软件加固</h1><h2 id="Android软件加固概述"><a href="#Android软件加固概述" class="headerlink" title="Android软件加固概述"></a>Android软件加固概述</h2><p>从2012年开始，移动互联网进入快速发展阶段，Android App开发热潮的兴起，也推动了Android平台软件保护技术的发展。</p>
+<ul>
+<li>  <strong>为何做加固</strong>   </li>
+</ul>
+<ol>
+<li> 保护核心代码  </li>
+<li> 防止营销作弊的手段   </li>
+<li> 防止代码被篡改 …</li>
+</ol>
+<h2 id="加固代际"><a href="#加固代际" class="headerlink" title="加固代际"></a>加固代际</h2><p>根据不同的理解，现在加固代际基本上可以按照五代或者三代去区分。</p>
+<h3 id="第一代：动态加载类"><a href="#第一代：动态加载类" class="headerlink" title="第一代：动态加载类"></a>第一代：动态加载类</h3><p>Apk中没有完整原始的Dex，需要运行时动态的加载到内存中</p>
+<h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><ul>
+<li><p>  落地加载<br>我们拿到需要加密的Apk和自己的壳程序Apk，然后用加密算法对源Apk进行加密再将壳Apk进行合并得到新的Dex文件，最后替换壳程序中的dex文件即可，得到新的Apk,那么这个新的Apk我们也叫作脱壳程序Apk.他已经不是一个完整意义上的Apk程序了，他的主要工作是：负责解密源Apk.然后加载Apk,让其正常运行起来。运行时首先将我们的Dex文件或者Apk文件解密，然后利用DexClassLoader加载器将其加载进内存中，然后利用反射加载待加固的Apk的Appkication，然后运行待加固程序即可。<br><img src="/2022/05/12/blog3/1.png"><br><img src="/2022/05/12/blog3/2.png"></p>
+</li>
+<li><p>  不落地加载<br>落地加载将Dex文件解密出来会保存到文件中，再通过DexClassLoader加载进内存中，而不落地加载直接重写DexClassLoader使其可以直接加载字节数组，避免写入文件中。我们要做的是重写DexClassLoader，而这涉及到三个函数defineClass、findClass、loadClass，在一个类被加载的时候，会先后调用这三个函数加载一个类，所以我们需要重写这三个函数。系统的DexClassLoader加载Dex进入内存的也必然是通过字节加载的，而在系统so中的libdvm.so中的openDexFile可以直接加载Dex文件，那么现在清楚了，我们可以通过编写so文件调用openDexFile函数加载Dex字节数组，值得注意的是，openDexFile函数返回值为一个int类型的cookie，可以简单理解成一个dex文件的’身份码’，通过该’身份码’即可操控这个dex文件,至于怎么调用该函数，可以通过dlopen和dlsym函数调用。</p>
+</li>
+</ul>
+<p><img src="/2022/05/12/blog3/3.png"></p>
+<h4 id="优劣"><a href="#优劣" class="headerlink" title="优劣"></a>优劣</h4><ul>
+<li><p>  优点<br>比较容易实现，无明显的兼容性问题 能有效对抗静态分析和二次打包</p>
+</li>
+<li><p>  缺点<br>启动时需要进行大量的解密运算，容易造成卡死的情况 在内存中的数据为完整的Dex，通过动态调试Dump内存即可获取完整的Dex</p>
+</li>
+</ul>
+<h4 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/4.png"><br>Dex字符串加密 资源加密 对抗反编译 对抗调试 Dex动态加载 so加密</p>
+<h3 id="第二代：函数抽取类"><a href="#第二代：函数抽取类" class="headerlink" title="第二代：函数抽取类"></a>第二代：函数抽取类</h3><h4 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h4><p>主要分为两个步骤指令抽取和指令还原</p>
+<ul>
+<li>  指令抽取<br>解析原始Dex文件格式，保存所有方法的代码结构体信息，通过传入需要置空指令的方法和类名，检索到其代码结构体信息。通过方法的代码结构体信息获取指令个数和偏移地址，构造空指令集，然后覆盖原始指令，重新计算dex文件的checksum和signature信息，回写到头部信息中。</li>
+</ul>
+<p><img src="/2022/05/12/blog3/5.png"></p>
+<p><img src="/2022/05/12/blog3/6.png"></p>
+<ul>
+<li>  指令还原<br>native层hook系统函数dexFindClass，获取类结构体信息（dexFindClass函数用于查找类的DexClassDef结构），获取类中所有的方法信息，通过指定方法名进行过滤，获取该方法的代码结构体信息，获取该方法被抽取的指令集，修改方法对应的内存地址为可读属性，直接进行指令还原。</li>
+</ul>
+<h4 id="优劣-1"><a href="#优劣-1" class="headerlink" title="优劣"></a>优劣</h4><ul>
+<li><p>  优点<br>加密粒度变小，加密技术从Dex文件级变为方法级 按需解密，解密操作延迟到某类方法被执行前，如果方法不被执行，则不被解密 解密后的代码在内存不连续，克服了内存被Dump的缺点，有效保护了移动客户端的Java代码</p>
+</li>
+<li><p>  缺点<br>使用大量的虚拟机内部结构，会出现兼容性问题，无法保护所有方法 无法对抗自定义虚拟机 它跟虚拟机的JIT优化出现冲突，达不到最佳的性能表现</p>
+</li>
+</ul>
+<h4 id="特点-1"><a href="#特点-1" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/7.png"></p>
+<p>除一代有的特点外 内存中无完整、连续的Dex so代码混淆、膨胀</p>
+<h3 id="第三代：VMP、Dex2C类"><a href="#第三代：VMP、Dex2C类" class="headerlink" title="第三代：VMP、Dex2C类"></a>第三代：VMP、Dex2C类</h3><h4 id="原理-2"><a href="#原理-2" class="headerlink" title="原理"></a>原理</h4><ul>
+<li>  VMP<br>执行到关键代码时进入壳so执行，关于这一点，不同的厂商有着不同的做法，比如把关键函数变成native函数，在壳so中动态或者静态注册</li>
+</ul>
+<p><img src="/2022/05/12/blog3/8.png"></p>
+<p>再比如更改关键方法的方法体</p>
+<p><img src="/2022/05/12/blog3/9.png"></p>
+<p>无论哪种方法其实都是为了能让壳函数代替原函数去执行 当执行该函数的指令时，解析出指令的OpCode,通过一个巨大的switch case找到处理对应OpCode的函数，然后执行</p>
+<p><img src="/2022/05/12/blog3/10.png"></p>
+<p>简单讲就是壳将原本的指令进行一次封装，将原本的指令转换为另一种表现形式</p>
+<ul>
+<li>  Dex2C<br>首先也是将关键代码注册为native函数，主要借助于JNI反射技术，将Java层的方法全部反射为native层，增大分析难度。之后再通过混淆、字符串加密等操作生成so，最后将so进行加固保护。</li>
+</ul>
+<h4 id="优劣-2"><a href="#优劣-2" class="headerlink" title="优劣"></a>优劣</h4><ul>
+<li><p>  优点<br>加固强度高，目前没有公开的脱壳工具 经过混淆加密后很难还原原函数</p>
+</li>
+<li><p>  缺点<br>效率较低，启动、运行时都比较耗时稳定性、可控性差，容易产生崩溃</p>
+</li>
+</ul>
+<h4 id="特点-2"><a href="#特点-2" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/11.png"></p>
+<p>除一、二代全部特点外 so代码虚拟化 对抗之前所有的脱壳方法</p>
+<h3 id="so加密"><a href="#so加密" class="headerlink" title="so加密"></a>so加密</h3><h4 id="section加密"><a href="#section加密" class="headerlink" title="section加密"></a>section加密</h4><ul>
+<li>  原理<br>将关键方法，存放在自定义的section中，通过解析每个section，将我们自定义的section进行加密。因为so在加载时会优先加载.init_array，所以将解密方法放在.init_array中，获取内存中各个section的起始地址和大小，将需要解密的section还原。</li>
+</ul>
+<h4 id="函数加密"><a href="#函数加密" class="headerlink" title="函数加密"></a>函数加密</h4><ul>
+<li>  原理<br>解析so，根据方法名找到指定的方法，将方法进行加密。加载so时，获取指定方法的地址，通过解密方法将指定方法解密。</li>
+</ul>
+<h4 id="特点-3"><a href="#特点-3" class="headerlink" title="特点"></a>特点</h4><p><img src="/2022/05/12/blog3/12.png"></p>
+<p><img src="/2022/05/12/blog3/13.png"></p>
+<p>由于原本的指令已经被加密成其他的字节，IDA等静态分析工具中会出现大段无法识别的代码</p>
+<h2 id="各厂商特征"><a href="#各厂商特征" class="headerlink" title="各厂商特征"></a>各厂商特征</h2><p>除此外还有很多大佬们可以自行总结</p>
+<h3 id="某梆"><a href="#某梆" class="headerlink" title="某梆"></a>某梆</h3><p>lib/libDexHelper.so、lib/libDexHelper-x86.so、</p>
+<h3 id="某加密"><a href="#某加密" class="headerlink" title="某加密"></a>某加密</h3><p>assets/ijiami.ajm、assets/ijiami.dat、assets/ijm_lib/libexec.so、assets/ijm_lib/libexecmain.so</p>
+<h3 id="某企鹅"><a href="#某企鹅" class="headerlink" title="某企鹅"></a>某企鹅</h3><p>lib/libshell-super.2019.so、lib/libshella-4.1.0.29.so</p>
+<h3 id="某数字"><a href="#某数字" class="headerlink" title="某数字"></a>某数字</h3><p>assets/libjiagu.so、assets/libjiagu_x86.so</p>
+<h3 id="某迦"><a href="#某迦" class="headerlink" title="某迦"></a>某迦</h3><p>lib/libxloader.so</p>
+<p>assets/libvdog、assets/libvdog64、assets/libvdog-x86</p>
+<h3 id="某付盾"><a href="#某付盾" class="headerlink" title="某付盾"></a>某付盾</h3><p>lib/libegis.so、lib/libegis-x86.so</p>
+<h2 id="脱壳工具"><a href="#脱壳工具" class="headerlink" title="脱壳工具"></a>脱壳工具</h2><h3 id="FRIDA-DEXDump"><a href="#FRIDA-DEXDump" class="headerlink" title="FRIDA-DEXDump"></a>FRIDA-DEXDump</h3><h4 id="原理-3"><a href="#原理-3" class="headerlink" title="原理"></a>原理</h4><p>通过Frida在内存中搜索dex\n035，因为Dex的头部都会存在一个dex\n035的模数，所以通过在内存中搜索dex\n035可以搜索到Dex文件。对于一些Dex它们被抹去了头部信息，对于这样的情况，FRIDA-DEXDump也提供了对应的方法，通过遍历当前进程中所有可以读的内存段，通过判断这个段的大小和Dex文件中一些关键区域的关系可以判断是否为一个Dex。</p>
+<h4 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h4><p>在FRIDA-DEXDumpGitHub中下载代码到本地或者通过<code>pip3 install frida-dexdump</code> 安装</p>
+<p><img src="/2022/05/12/blog3/14.png"></p>
+<p>用法就是首先打开，我们需要脱壳的软件，然后执行<code>python main.py -d</code>程序执行开始检索内存中的Dex</p>
+<p><img src="/2022/05/12/blog3/15.png"></p>
+<p>检索到后会保存在SavePath对应的目录下</p>
+<p>也可以通过<code>python main.py -h</code>查看它的其他使用方法</p>
+<p><img src="/2022/05/12/blog3/16.png"></p>
+<p>最终得到它脱出来的Dex，可以看下它脱壳效果</p>
+<p><img src="/2022/05/12/blog3/17.png"></p>
+<h3 id="Youpk"><a href="#Youpk" class="headerlink" title="Youpk"></a>Youpk</h3><h4 id="原理-4"><a href="#原理-4" class="headerlink" title="原理"></a>原理</h4><p>从ClassLinker中遍历所有DexFile对象，在虚拟机中Dex文件都用DexFile对象来表示，并Dump出所有Dex文件。此时只是整体Dump，Dex中的方法还未还原。遍历DexFile中的ClassDef结构，获取到所有Class，主动调用Class中的所有的方法，让程序强制走switch解释器执行，在解释器中添加Hook代码，当方法执行时自动保存CodeItem。根据保存的CodeItem和Dump下来的Dex进行合并，还原Dex中被抽取的指令。</p>
+<h4 id="使用-1"><a href="#使用-1" class="headerlink" title="使用"></a>使用</h4><p>首先下载刷机包和还原工具，目前仅支持刷pixel 1手机</p>
+<p><img src="/2022/05/12/blog3/18.png"></p>
+<p>解压相关的镜像，<code>fastboot flash xxx /Download/xxx.img</code>依次刷入</p>
+<p><img src="/2022/05/12/blog3/19.png"></p>
+<p>配置待脱壳的App包名<code>adb shell &quot;echo com.xxx &gt;&gt; /data/local/tmp/unpacker.config&quot;</code></p>
+<p>启动Apk等待脱壳，每隔10秒将自动重新脱壳(已完全dump的dex将被忽略), 当日志打印unpack end时脱壳完成</p>
+<p>dump文件路径为/data/data/包名/unpacker，使用adb命令将文件pull出</p>
+<p><img src="/2022/05/12/blog3/20.png"></p>
+<p>使用dexfixer.jar修复Dex，<code>java -jar dexfixer.jar /path/unpacker /path/output</code></p>
+<p>最后我们对比一下还原前后的代码</p>
+<p>还原前</p>
+<p><img src="/2022/05/12/blog3/21.png"></p>
+<p>还原后</p>
+<p><img src="/2022/05/12/blog3/22.png"></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文简单地总结了一下Android加固的背景和发展历史，也介绍了一些目前常见的脱壳工具。对于so加密的情况，目前也有许多方法应对，比如ida动态调试dump内存中的so，GG模拟器dump内存，frida dump so，unidbg等等。对于混淆的so，也有jnitrace，unidbg，还有hluwa大佬的大作obpo等工具辅助我们分析。除此以外还有还有一些优秀的脱壳工具如Fart等，我也没有再做介绍了。总之感谢这些大佬们的努力和开源，没有你们就没有白嫖的我们，哈哈…</p>
+]]></content>
+      <categories>
+        <category>Android防护手段</category>
+      </categories>
+      <tags>
+        <tag>防护</tag>
+        <tag>加固</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>objection+ Wallbreaker基本使用</title>
     <url>/2022/05/13/blog5/</url>
     <content><![CDATA[<h1 id="objection-Wallbreaker基本使用"><a href="#objection-Wallbreaker基本使用" class="headerlink" title="objection+ Wallbreaker基本使用"></a>objection+ Wallbreaker基本使用</h1><table>
@@ -568,6 +568,167 @@
       </tags>
   </entry>
   <entry>
+    <title>如何在移动应用程序开发中正确使用加密技术</title>
+    <url>/2023/03/14/%E5%A6%82%E4%BD%95%E5%9C%A8%E7%A7%BB%E5%8A%A8%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%BC%80%E5%8F%91%E4%B8%AD%E6%AD%A3%E7%A1%AE%E4%BD%BF%E7%94%A8%E5%8A%A0%E5%AF%86%E6%8A%80%E6%9C%AF/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>首先我们来看看过去几年都发生了哪些因为加密技术使用不当或者未加密而导致的安全风险。</p>
+<h3 id="KRACK攻击"><a href="#KRACK攻击" class="headerlink" title="KRACK攻击"></a>KRACK攻击</h3><p>时间：2017年10月</p>
+<p>描述：KRACK攻击利用Wi-Fi加密标准WPA2的漏洞，允许攻击者窃取Wi-Fi网络中的敏感信息，如密码和其他私人数据。 </p>
+<p>参考文章链接：<a href="https://www.krackattacks.com/">https://www.krackattacks.com/</a></p>
+<p>漏洞修复文章链接：<a href="https://www.zdnet.com/article/krack-attack-patches-heres-where-the-bugs-are-lurking/">https://www.zdnet.com/article/krack-attack-patches-heres-where-the-bugs-are-lurking/</a></p>
+<h3 id="WhatsApp远程执行代码漏洞"><a href="#WhatsApp远程执行代码漏洞" class="headerlink" title="WhatsApp远程执行代码漏洞"></a>WhatsApp远程执行代码漏洞</h3><p>时间：2019年5月 </p>
+<p>描述：WhatsApp存在远程执行代码漏洞，攻击者可以通过向受害者发送一个特制的视频文件，来在其设备上执行任意代码。这个漏洞影响了大约1.5亿用户。 </p>
+<p>参考文章链接：<a href="https://thehackernews.com/2019/05/hacking-whatsapp-account.html">https://thehackernews.com/2019/05/hacking-whatsapp-account.html</a> </p>
+<p>漏洞修复文章链接：<a href="https://www.whatsapp.com/security/advisories/2019-07-15">https://www.whatsapp.com/security/advisories/2019-07-15</a></p>
+<h3 id="Zoom加密漏洞"><a href="#Zoom加密漏洞" class="headerlink" title="Zoom加密漏洞"></a>Zoom加密漏洞</h3><p>时间：2020年4月 </p>
+<p>描述：视频会议应用Zoom存在加密漏洞，攻击者可以轻松地窃取会议中的敏感信息。这个漏洞被广泛利用，引起了广泛的关注和担忧。 </p>
+<p>参考文章链接：<a href="https://thehackernews.com/2020/04/zoom-cybersecurity-hacking.html">https://thehackernews.com/2020/04/zoom-cybersecurity-hacking.html</a> </p>
+<p>漏洞修复文章链接：<a href="https://blog.zoom.us/wordpress/2020/04/09/zoom-rolling-out-security-enhancements-to-address-concerns/">https://blog.zoom.us/wordpress/2020/04/09/zoom-rolling-out-security-enhancements-to-address-concerns/</a></p>
+<h3 id="COVID-19疫情相关的网络攻击"><a href="#COVID-19疫情相关的网络攻击" class="headerlink" title="COVID-19疫情相关的网络攻击"></a>COVID-19疫情相关的网络攻击</h3><p>时间：2020年 </p>
+<p>描述：COVID-19疫情相关的网络攻击是一系列利用新冠病毒疫情来进行网络攻击的方法。这些攻击包括钓鱼邮件、恶意软件、虚假网站等，旨在窃取用户的个人信息、金融信息等。 </p>
+<p>参考文章链接：<a href="https://www.zdnet.com/article/coronavirus-themed-attacks-now-the-crowd-favorite-among-cybercriminals/">https://www.zdnet.com/article/coronavirus-themed-attacks-now-the-crowd-favorite-among-cybercriminals/</a> </p>
+<h3 id="Freak漏洞"><a href="#Freak漏洞" class="headerlink" title="Freak漏洞"></a>Freak漏洞</h3><p>时间：2020年3月 </p>
+<p>描述：Freak漏洞是一种利用加密算法中的漏洞来进行攻击的方法。该漏洞允许攻击者破解TLS/SSL连接中的加密，从而窃取传输的敏感信息。 </p>
+<p>参考文章链接：<a href="https://freakattack.com/">https://freakattack.com/</a> </p>
+<p>漏洞修复文章链接：<a href="https://www.us-cert.gov/ncas/alerts/TA15-086A">https://www.us-cert.gov/ncas/alerts/TA15-086A</a></p>
+<p>那么我们如何在移动应用程序开发过程中正确使用加密技术呢？</p>
+<h2 id="密码的作用"><a href="#密码的作用" class="headerlink" title="密码的作用"></a>密码的作用</h2><p>密码技术是保障网络与信息安全最有效、最可靠、最经济的手段，在信息安全方面发挥着重要作用，保证了信息的机密性、真实性、数据完整性和行为的不可否认性。</p>
+<h3 id="保证信息的机密性"><a href="#保证信息的机密性" class="headerlink" title="保证信息的机密性"></a>保证信息的机密性</h3><p>信息的机密性是网络与信息安全的主要属性之一，是指确保信息不会泄露给未经授权的个人、计算机和其他实体的性质。</p>
+<p>信息是网络空间中最有价值的资产信息，一旦泄露就可能会给国家、社会、行业、团体、个人带来巨大的危害和影响。</p>
+<p>现实世界中，要保证信息的机密性，如将一份文件秘密保存或传递，一般可采用加装保护设施、增加警卫人员、藏匿或伪装等手段。而这些手段操作不便捷的同时，需要投入的人力物力大，人为风险因素多。</p>
+<p>信息化时代，纸质文件、资料、书籍等信息被编码为计算机电子文件后，虽然大大提高了文件处理、传输和存储的能力，但为保证信息的机密性带来新的挑战。如电子文件被拷贝、截取和传播等诸多行为难以察觉。</p>
+<p>密码学中的加密保护技术保证了信息的机密性。使用实现加密的计算机程序对电子文件加密生成形状乱码的密文，有了足够强大的加密算法防护，即使攻击者拦截到密文，也无法从密文中获取有用的信息。而拥有密钥的人则可以使用实现解密的计算机程序从乱码中恢复原始文件，获取正确信息。</p>
+<p>信息安全中的访问控制技术采用口令技术防止非法用户进入某个应用系统的数据库，在一定程度上保证了信息的机密性。但这一技术仅相当于在数据库门口增加了“门卫”而数据本身仍然是明文状态，一旦攻击者绕过“门卫”或“门卫”失效，数据库毫无机密性可言。</p>
+<h3 id="保证信息的真实性"><a href="#保证信息的真实性" class="headerlink" title="保证信息的真实性"></a>保证信息的真实性</h3><p>信息的真实性也是网络与信息安全的主要属性之一，是指保证信息来源可靠、没有被伪造和篡改的性质。</p>
+<p>如何鉴别信息的合法性？如何确认真实的身份信息？这些都是网络与信息安全领域非常重要的任务。它们直接影响着社会秩序、生产生活秩序的各个方面。</p>
+<p>现实生活中，可以通过相貌、声音、体态等体貌特征来确认人的身份，通过盖章、签字、手印等措施保证消息来源的可靠性。</p>
+<p>信息化时代，在开放的网络环境下，身份信息和消息来源可以被伪造，电子信息和文件会被拷贝、截获和重用。</p>
+<p>密码学中的安全认证技术解决了信息的真实性等问题。安全认证技术包括数字签名、消息认证码、身份认证协议等，基本思想是:合法用户拥有各自的“秘密信息”，可使用“秘密信息”处理公共信息并获得相应的“印章”用于证明公共信息的真实性。没有相应“秘密信息”的非法用户不能伪造“印章”。</p>
+<p>其他可保证真实性的技术，如生物特征技术利用指纹、虹膜等进行身份认证，但它们如果不结合密码技术用于远程认证将非常不安全。</p>
+<h3 id="保证数据的完整性"><a href="#保证数据的完整性" class="headerlink" title="保证数据的完整性"></a>保证数据的完整性</h3><p>数据完整性是网络与信息安全的又一个重要属性，表示数据是不是未经授权篡改或破坏的性质。</p>
+<p>信息化时代带来了前所未有数据量、信息量、文件量等，各行各业都有大量公开传播和存储的数据，保证数据在传输、存储过程中不被篡改的任务艰巨，特别是在维护大量资料库、文件库时，更为艰巨。</p>
+<p>现实生活中，可采用签名、盖章等手段保证数据完整性。</p>
+<p>信息化时代，电子文档可采用水印技术，保护文件不被篡改，但电子文档完整性不易检测，被修改后很难发现。</p>
+<p>对于大量的电子文件保护任务，哈希算法可以轻松实现数据完整性，通过称为摘要的数学过程，计算从文件中唯一的标识文件的特征信息。只要像这样的简短摘要附加到电子文件，就可以验证文件的完整性。要检查文件是否已被修改，只需使用哈希算法计算新摘要，将这个新的摘要与原来附带的摘要进行比对如果两个摘要一样，反之则证明已被修改。</p>
+<h3 id="保证行为的不可否认性"><a href="#保证行为的不可否认性" class="headerlink" title="保证行为的不可否认性"></a>保证行为的不可否认性</h3><p>不可否认性同样是网络与信息安全的重要属性。</p>
+<p>现实生活中发生的行为会留下证据或“集群”作为不可否认的证据。如在签署合同时，一方拒绝签署合同，那么他的签名就可以作为其拒绝行为不可否认性的证据。</p>
+<p>信息化时代，如何防止已经在网络上验证的电子合同、电子报表等的不可否认是实现网络与信息安全的重要任务之一。</p>
+<p>数字签名技术基于公钥的加密算法可以有效地解决行为的不可否认问题。一旦用户签署了数字签名就不能拒绝或拒绝他们。对解决网络上的纠纷、电子商务的纠纷等问题数字签名是必不可少的工具。虽然计算机、网络和信息系统的日志能在一定程度上证明用户的操作行为，但由于日志容易被伪造和篡改，因此无法保证行为的不可否认性。</p>
+<h2 id="加密算法使用不当导致的安全风险"><a href="#加密算法使用不当导致的安全风险" class="headerlink" title="加密算法使用不当导致的安全风险"></a>加密算法使用不当导致的安全风险</h2><p>1、不安全的存储：移动客户端可能会将敏感数据（如密码和用户凭证）存储在明文或不安全的格式中，如明文文本文件或不加密的数据库中。</p>
+<p>2、加密算法使用不当：加密算法的实现可能存在安全漏洞，如使用弱加密算法或未正确配置加密参数。此外，使用固定的密钥或硬编码密钥也可能导致安全漏洞。</p>
+<p>3、未使用HTTPS：未使用HTTPS协议将移动应用程序与服务器之间的通信进行加密，可能会使敏感数据在传输过程中暴露给攻击者。</p>
+<p>4、未正确验证证书：客户端应用程序可能会受到中间人攻击，这些攻击者可能会在通信链路上欺骗应用程序，以获取敏感数据。要解决此问题，应用程序需要正确验证服务器证书。</p>
+<p>5、反向工程攻击：攻击者可能会对应用程序进行反向工程，以发现应用程序中存在的漏洞，并利用它们对应用程序进行攻击。</p>
+<p>6、未更新的软件：移动客户端可能会运行过时的软件版本，这些版本可能包含已知的安全漏洞和弱点，攻击者可以利用这些漏洞进行攻击。</p>
+<p>7、不安全的身份验证：使用不安全的身份验证方式，如明文传输密码或使用简单的身份验证方法（如基于cookie的身份验证），可能会导致攻击者轻松窃取用户凭证。</p>
+<p>8、不良的代码实践：在代码实现过程中，可能存在逻辑错误和安全漏洞，例如缓冲区溢出、SQL注入、跨站脚本等。</p>
+<p>9、未对用户数据进行合适的清除：应用程序可能会将敏感数据留存在本地设备上，例如用户凭证或私密聊天记录，这可能会导致安全隐患。</p>
+<p>10、恶意软件攻击：恶意软件可能会通过植入移动应用程序中的恶意代码或通过攻击者拥有的恶意应用程序来攻击移动客户端，以获取敏感数据或控制设备。</p>
+<h2 id="通信中安全性威胁"><a href="#通信中安全性威胁" class="headerlink" title="通信中安全性威胁"></a>通信中安全性威胁</h2><p>一般的，我们在网络中传输的数据，都可以认为是存在这潜在的风险的。用一句话来概括就是：“任何在网络中传输的明文数据都存在安全性威胁。”  </p>
+<p><strong>下面就列举下我们通信中面临的四种威胁：</strong>  </p>
+<p>- <strong>第一，中断</strong>。攻击者有意破坏和切断他人在网络上的通信，这是对可用性的攻击。<br>- <strong>第二，截获</strong>。属于被动攻击，攻击者从网络上窃听他人的通信内容，破坏信息的机密性。<br>- <strong>第三，篡改</strong>。攻击者故意篡改网络上传送的报文，这是对完整性的攻击。<br>- <strong>第四，伪造</strong>。攻击者伪造信息在网络传送，这是对真实性的攻击。  </p>
+<p><img src="/2023/03/14/%E5%A6%82%E4%BD%95%E5%9C%A8%E7%A7%BB%E5%8A%A8%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%BC%80%E5%8F%91%E4%B8%AD%E6%AD%A3%E7%A1%AE%E4%BD%BF%E7%94%A8%E5%8A%A0%E5%AF%86%E6%8A%80%E6%9C%AF/1.png"></p>
+<h2 id="密钥硬编码风险案例"><a href="#密钥硬编码风险案例" class="headerlink" title="密钥硬编码风险案例"></a>密钥硬编码风险案例</h2><h3 id="Android"><a href="#Android" class="headerlink" title="Android"></a>Android</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title function_">encrypt</span><span class="params">(String data)</span>&#123;</span><br><span class="line">	<span class="keyword">try</span> &#123; </span><br><span class="line">		<span class="type">SecretKeySpec</span> <span class="variable">secretKeySpec</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">SecretKeySpec</span>(<span class="string">&quot;49u5gh249gh24985ghf429gh4ch8f23f&quot;</span>.getBytes(),<span class="string">&quot;AES&quot;</span>); </span><br><span class="line">		<span class="type">Cipher</span> <span class="variable">instance</span> <span class="operator">=</span> Cipher.getInstance(<span class="string">&quot;AES&quot;</span>); </span><br><span class="line">		instance.init(<span class="number">1</span>, secretKeySpec); </span><br><span class="line">		<span class="keyword">return</span> Base64.encodeToString(instance.doFinal(data.getBytes())，<span class="number">0</span>); </span><br><span class="line">	<span class="keyword">catch</span>(Exception e)&#123; </span><br><span class="line">		<span class="keyword">return</span> <span class="string">&quot;&quot;</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="iOS"><a href="#iOS" class="headerlink" title="iOS"></a>iOS</h3><figure class="highlight swift"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> Foundation</span><br><span class="line"><span class="keyword">import</span> CommonCrypto</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">fileprivate</span> <span class="keyword">let</span> aesKey <span class="operator">=</span> <span class="string">&quot;gEKC8gte1FvR3oJV&quot;</span></span><br><span class="line"><span class="keyword">fileprivate</span> <span class="keyword">let</span> iv <span class="operator">=</span> <span class="string">&quot;MF00KFtxfibUyDWo&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Crypto</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">let</span> aesInstance <span class="operator">=</span> <span class="type">AESCrypto</span>(key: aesKey, iv: iv)</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">init</span>()&#123;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">func</span> <span class="title function_">encrypt</span>(<span class="keyword">_</span> <span class="params">string</span>: <span class="type">String</span>) -&gt; <span class="type">String</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> aesInstance.encrypt(string: string).base64EncodedString()</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">func</span> <span class="title function_">decrypt</span>(<span class="keyword">_</span> <span class="params">data</span>: <span class="type">String</span>) -&gt; <span class="type">String</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> aesInstance.decrypt(data: <span class="type">Data</span>(base64Encoded:data)<span class="operator">!</span>)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">fileprivate</span> <span class="keyword">class</span> <span class="title class_">AESCrypto</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">let</span> key: <span class="type">Data</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">let</span> iv: <span class="type">Data</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">init</span>(<span class="params">key</span>: <span class="params">String，iv</span>:<span class="type">String</span>)&#123;</span><br><span class="line">        <span class="keyword">guard</span> kevcount<span class="operator">=</span>kccKeySizeAEs128. <span class="keyword">let</span> kevData <span class="operator">=</span> kev.datalusina: .utf8) <span class="keyword">else</span> &#123;</span><br><span class="line"></span><br><span class="line">            <span class="built_in">preconditionFailure</span>(<span class="string">&quot;Error: Failed to set a key&quot;</span>)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">guard</span> iv.count <span class="operator">=</span> kcCBlockSizeAES128,<span class="keyword">let</span> ivData <span class="operator">=</span> iv.data(using: .utf8) <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="built_in">preconditionFailure</span>(<span class="string">&quot;Error: Failed to set an initial vector&quot;</span>)</span><br><span class="line">            &#125;</span><br><span class="line">                <span class="keyword">self</span>.key <span class="operator">=</span> kevData</span><br><span class="line">                <span class="keyword">self</span>.iv <span class="operator">=</span> ivData</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">func</span> <span class="title function_">encrypt</span>(<span class="params">string</span>: <span class="type">String</span>) -&gt; <span class="type">Data</span> &#123;&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="keyword">let</span> status <span class="operator">=</span> cryptData.withUnsafeMutableBytes &#123; cryptBytes <span class="keyword">in</span></span><br><span class="line">            data.withUnsafeBytes &#123; dataBytes <span class="keyword">in</span></span><br><span class="line">                iv.withunsafeBytes &#123; ivBytes <span class="keyword">in</span></span><br><span class="line">                    key.withunsafeBytes &#123; keyBytes <span class="keyword">in</span></span><br><span class="line">                        <span class="type">CCCrypt</span>(option，<span class="type">CCAlgorithm</span>(kCCAlgorithmAES),options,keyBytes.baseAddress, keyLength, ivBytes.baseAddress</span><br><span class="line">                        &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="Android-SDK提供的加密相关API"><a href="#Android-SDK提供的加密相关API" class="headerlink" title="Android SDK提供的加密相关API"></a>Android SDK提供的加密相关API</h2><p>Android SDK使用的API和JAVA提供的基本相似，由以下部分组成：  </p>
+<ul>
+<li>Java Cryptography Architecture：JCA，java加密体系结构；</li>
+<li>Java Cryptography Extension：JCE，Java加密扩展包)；</li>
+<li>Java Secure Sockets Extension：JSSE，Java安全套接字扩展包；</li>
+<li>Java Authentication and Authentication Service：JAAS，Java 鉴别与安全服务。    </li>
+</ul>
+<p>JCA提供基本的加密框架，如证书、数字签名、消息摘要和密钥对产生器，对应的Android API中的以下几个包：  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">java.security</span><br><span class="line">java.security.acl</span><br><span class="line">java.security.cert</span><br><span class="line">java.security.interfaces</span><br><span class="line">java.security.spec</span><br></pre></td></tr></table></figure>
+
+<p>JCE扩展了JCA，提供了各种加密算法、摘要算法、密钥管理等功能，对应的Android API中的以下几个包：  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">javax.crypto</span><br><span class="line">javax.crypto.interfaces</span><br><span class="line">javax.crypto.spec</span><br></pre></td></tr></table></figure>
+
+<p>JSSE提供了SSL（基于安全套接层）的加密功能，使用HTTPS加密传输使用，对应的Android API主要是java.net.ssl包中。  </p>
+<p>JAAS 提供了在Java平台上进行用户身份鉴别的功能。对应的Android API主要在以下几个包：  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">javax.security.auth</span><br><span class="line">javax.security.auth.login</span><br><span class="line">javax.security.auth.callback</span><br><span class="line">javax.security.auth.x500</span><br></pre></td></tr></table></figure>
+
+<p>它们其实只是一组接口，实际的算法是可由不同的Provider提供，Android API默认的Provider主要是是Bouncy Castle和OpenSSL。 此外Android API还提供了android.security和android.security.keystore（API 23新增）来管理keychain和keystore。</p>
+<h2 id="常用算法之：Base64编码"><a href="#常用算法之：Base64编码" class="headerlink" title="常用算法之：Base64编码"></a>常用算法之：Base64编码</h2><p>Base64编码算法是一种用64个字符（ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/）来表示任意二进制数据的方法。在计算机网络发展的早期，由于“历史原因”，电子邮件不支持非ASCII码字符，如果要传送的电子邮件带有非ASCII码字符（诸如中文）或者图片，用户收到的电子邮件将会是一堆乱码，因此发明了Base64编码算法。至于为何会乱码？请大家自行Google。在加解密算法中，原始的数据和加密后的数据一般也是二进制数据，为了不传输出错，方便保存或者调试代码，一般需要对加密后的数据进行base64编码。  </p>
+<p>Android提供了Base64编码的工具类android.util.Base64，可以直接使用，不用自己去实现base64编码的算法了。<strong>如：</strong>  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">byte</span>[] output = sha.digest();</span><br><span class="line"><span class="type">String</span> <span class="variable">result</span> <span class="operator">=</span> Base64.encodeToString(output, Base64.DEFAULT); </span><br></pre></td></tr></table></figure>
+
+<h3 id="开发者建议"><a href="#开发者建议" class="headerlink" title="开发者建议"></a>开发者建议</h3><p>base64只是一种编码方式，并不是一种加密算法，不要使用base64来加密数据。  </p>
+<h2 id="常用算法之：随机数生成器"><a href="#常用算法之：随机数生成器" class="headerlink" title="常用算法之：随机数生成器"></a>常用算法之：随机数生成器</h2><p>在Android加密算法中需要随机数时要使用SecureRandom来获取随机数。 <strong>如：</strong>  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">SecureRandom</span> <span class="variable">sr</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">SecureRandom</span>();</span><br><span class="line"><span class="type">byte</span>[] output = <span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">16</span>]; </span><br><span class="line">sr.nextBytes(output); </span><br></pre></td></tr></table></figure>
+<p>注意不要给SecureRandom设置种子。调用seeded constructor或者setSeed(byte[])是不安全的。SecureRandom()默认使用的是dev/urandom作为种子产生器，这个种子是不可预测的。  </p>
+<h3 id="开发者建议-1"><a href="#开发者建议-1" class="headerlink" title="开发者建议"></a>开发者建议</h3><ul>
+<li>不要使用Random类来获取随机数。</li>
+<li>在使用SecureRandom时候，不要设置种子。使用以下函数设置种子都是有风险的： </li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">SecureRandom.SecureRandom(<span class="type">byte</span>[] seed) </span><br><span class="line">SecureRandom.setSeed(<span class="type">long</span> seed)</span><br><span class="line">SecureRandom.setSeed(<span class="type">byte</span>[] seed) </span><br></pre></td></tr></table></figure>
+<h2 id="常用算法之：Hash算法"><a href="#常用算法之：Hash算法" class="headerlink" title="常用算法之：Hash算法"></a>常用算法之：Hash算法</h2><p>Hash算法是指任意长度的字符串输入，此算法能给出固定n比特的字符串输出，输出的字符串一般称为Hash值。  </p>
+<h3 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h3><ul>
+<li>抗碰撞性：寻找两个不同输入得到相同的输出值在计算上是不可行的，需要大量的时间去寻找到具有相同输出的两个输入字符串。</li>
+<li>不可逆：不可从结果推导出它的初始状态。  </li>
+</ul>
+<p>抗碰撞性使得Hash算法对原始输入的任意一点更改，都会导致产生不同的Hash值，因此Hash算法可以用来检验数据的完整性。我们经常见到在一些网站下载某个文件时，网站还提供了此文件的hash值，以供我们下载文件后检验文件是否被篡改。 不可逆的特性使Hash算法成为一种单向密码体制，只能加密不能解密，可以用来加密用户的登录密码等凭证。  </p>
+<h3 id="开发者建议-2"><a href="#开发者建议-2" class="headerlink" title="开发者建议"></a>开发者建议</h3><p>1、建议使用SHA-256、SHA-3算法:<br>如使用SHA-256算法对message字符串做哈希：  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">byte</span>[] input = message.getBytes();</span><br><span class="line"><span class="type">MessageDigest</span> <span class="variable">sha</span> <span class="operator">=</span> MessageDigest.getInstance(<span class="string">&quot;SHA-256&quot;</span>);</span><br><span class="line">sha.update(input);</span><br><span class="line"><span class="type">byte</span>[] output = sha.digest();</span><br><span class="line"><span class="type">String</span> <span class="variable">result</span> <span class="operator">=</span> Base64.encodeToString(output, Base64.DEFFAULT); </span><br></pre></td></tr></table></figure>
+<p>2、不建议使用MD2、MD4、MD5、SHA-1、RIPEMD算法来加密用户密码等敏感信息：<br>这一类算法已经有很多破解办法，例如md5算法，网上有很多查询的字典库，给出md5值，可以查到加密前的数据。  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">MessageDigest</span> <span class="variable">md</span> <span class="operator">=</span> MessageDigest.getInstance(<span class="string">&quot;MD5&quot;</span>);</span><br><span class="line"><span class="type">byte</span>[] md5Bytes = md.digest(str.getBytes()); </span><br><span class="line"><span class="type">String</span> <span class="variable">result</span> <span class="operator">=</span> Base64.encodeToString(md5Bytes，Base64.DEFAULT); </span><br></pre></td></tr></table></figure>
+<p>3、不要使用哈希函数做为对称加密算法的签名。  </p>
+<p>4、注意：当多个字符串串接后再做hash，要非常当心：<br>如：字符串S，字符串T，串接做hash，记为 H (S||T)。但是有可能发生以下情况。如“builtin||securely” 和 “built||insecurely”的hash值是完全一样的。 如何修改从而避免上述问题产生？ 改为H(length(S) || S || T)或者 H(H(S)||H(T))或者H(H(S)||T)。  </p>
+<p>实际开发过程中经常会对url的各个参数，做词典排序，然后取参数名和值串接后加上某个SECRET字符串，计算出hash值，作为此URL的签名， 如foo=1, bar=2, baz=3 排序后为bar=2, baz=3, foo=1，做hash的字符串为：SECRETbar2baz3foo1，在参数和值之间没有分隔符，则”foo=bar”和”foob=ar”的hash值是一样的，”foo=bar&amp;fooble=baz”和”foo=barfooblebaz”一样，这样通过精心构造的恶意参数就有可能与正常参数的hash值一样，从而骗过服务器的签名校验。  </p>
+<h2 id="消息认证算法"><a href="#消息认证算法" class="headerlink" title="消息认证算法"></a>消息认证算法</h2><p>要确保加密的消息不是别人伪造的，需要提供一个消息认证码（MAC，Message authentication code）。 消息认证码是带密钥的hash函数，基于密钥和hash函数。密钥双方事先约定，不能让第三方知道。  </p>
+<p>消息发送者使用MAC算法计算出消息的MAC值，追加到消息后面一起发送给接收者。接收者收到消息后，用相同的MAC算法计算接收到消息MAC值，并与接收到的MAC值对比是否一样。  </p>
+<h3 id="开发者建议-3"><a href="#开发者建议-3" class="headerlink" title="开发者建议"></a>开发者建议</h3><p>建议使用HMAC-SHA256算法，避免使用CBC-MAC。 <strong>HMAC-SHA256例子如下：</strong>  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//初始化.KeyGenerator</span></span><br><span class="line"><span class="type">KeyGenerator</span> <span class="variable">keyGenerator</span> <span class="operator">=</span> KeyGenerator.getInstance(<span class="string">&quot;HmacSHA256&quot;</span>);</span><br><span class="line"><span class="comment">//产生密钥</span></span><br><span class="line"><span class="type">SecretKey</span> <span class="variable">secretKey</span> <span class="operator">=</span> keyGenerator.generateKey();</span><br><span class="line"><span class="comment">//获取密钥</span></span><br><span class="line"><span class="type">byte</span>[] key = secretKey.getEncoded();</span><br><span class="line">Log.d(Base64.encodeToString(key，Base64.DEFAULT));</span><br><span class="line"></span><br><span class="line"><span class="comment">//还原密钥</span></span><br><span class="line"><span class="type">SecretKey</span> <span class="variable">restoreSecretKey</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">SecretKeySpec</span>(key，<span class="string">&quot;HmacSHA256&quot;</span>);</span><br><span class="line"><span class="comment">//实例化MAC</span></span><br><span class="line"><span class="type">Mac</span> <span class="variable">mac</span> <span class="operator">=</span> Mac.getInstance(restoreSecretKey.getAlgorithm());</span><br><span class="line"><span class="comment">//初始化MAC</span></span><br><span class="line">mac.init(restoreSecretKey);</span><br><span class="line"><span class="comment">//执行摘要</span></span><br><span class="line"><span class="type">byte</span>[] hmacSHA256Bytes = mac.doFinal(message.getBytes()); </span><br><span class="line">result = Base64.encodeToString(hmacSHA256Bytes，Base64.DEFAULT):</span><br></pre></td></tr></table></figure>
+
+<h2 id="对称加密算法"><a href="#对称加密算法" class="headerlink" title="对称加密算法"></a>对称加密算法</h2><p>在对称加密算法中，数据发信方将明文（原始数据）和加密密钥一起经过特殊加密算法处理后，使其变成复杂的加密密文发送出去。收信方收到密文后，若想解读原文，则需要使用加密用过的密钥及相同算法的逆算法对密文进行解密，才能使其恢复成可读明文。在对称加密算法中，使用的密钥只有一个，发收信双方都使用这个密钥对数据进行加密和解密，这就要求解密方事先必须知道加密密钥。<br>该算法的缺点是，如果一旦密钥泄漏，那么加密的内容将都不可信了。  </p>
+<h3 id="开发者建议-4"><a href="#开发者建议-4" class="headerlink" title="开发者建议"></a>开发者建议</h3><p>1、建议使用AES算法。<br>2、DES默认的是56位的加密密钥，已经不安全，不建议使用。<br>3、注意加密模式不要使用ECB模式。ECB模式不安全，说明问题的经典的三张图片，如下：<br><strong>明文是：</strong><br><img src="/2023/03/14/%E5%A6%82%E4%BD%95%E5%9C%A8%E7%A7%BB%E5%8A%A8%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%BC%80%E5%8F%91%E4%B8%AD%E6%AD%A3%E7%A1%AE%E4%BD%BF%E7%94%A8%E5%8A%A0%E5%AF%86%E6%8A%80%E6%9C%AF/2.png"></p>
+<p><strong>用ECB加密模式后：</strong><br><img src="/2023/03/14/%E5%A6%82%E4%BD%95%E5%9C%A8%E7%A7%BB%E5%8A%A8%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%BC%80%E5%8F%91%E4%B8%AD%E6%AD%A3%E7%A1%AE%E4%BD%BF%E7%94%A8%E5%8A%A0%E5%AF%86%E6%8A%80%E6%9C%AF/3.png"></p>
+<p><strong>用CBC加密模式后：</strong><br><img src="/2023/03/14/%E5%A6%82%E4%BD%95%E5%9C%A8%E7%A7%BB%E5%8A%A8%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%BC%80%E5%8F%91%E4%B8%AD%E6%AD%A3%E7%A1%AE%E4%BD%BF%E7%94%A8%E5%8A%A0%E5%AF%86%E6%8A%80%E6%9C%AF/4.png"> </p>
+<p>4、Android 提供的AES加密算法API默认使用的是ECB模式，所以要显式指定加密算法为：CBC或CFB模式，可带上PKCS5Padding填充。AES密钥长度最少是128位，推荐使用256位。  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//生成KEY</span></span><br><span class="line"><span class="type">KeyGenerator</span> <span class="variable">keyGenerator</span> <span class="operator">=</span> KeyGenerator.getInstance(<span class="string">&quot;AES&quot;</span>); </span><br><span class="line">keyGenerator.init(<span class="number">256</span>);</span><br><span class="line"><span class="comment">//产生密钥</span></span><br><span class="line"><span class="type">SecretKey</span> <span class="variable">secretKey</span> <span class="operator">=</span> keyGenerator.generateKey();</span><br><span class="line"><span class="comment">//获取密钥</span></span><br><span class="line"><span class="type">byte</span>[] keyBytes = secretKey.getEncoded();</span><br><span class="line">Log.d(<span class="string">&quot;AES KEY&quot;</span>, Base64.encodeToString(keyBytes，<span class="number">0</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">//还原密钥</span></span><br><span class="line"><span class="type">SecretKey</span> <span class="variable">key</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">SecretKeySpec</span>(keyBytes, <span class="string">&quot;AES&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//加密</span></span><br><span class="line"><span class="type">Cipher</span> <span class="variable">cipher</span> <span class="operator">=</span> Cipher.getInstance(<span class="string">&quot;AES/CBC/PKCS5Padding&quot;</span>); </span><br><span class="line">cipher.init(Cipher.ENCRYPT_MODE, key);</span><br><span class="line"><span class="type">byte</span>[] encodeResult = cipher.doFinal(plainText.getBytes());</span><br><span class="line">Log.d(<span class="string">&quot;AESencode&quot;</span>, Base64.encodeToString(encodeResult, Base64.DEFAULT));</span><br></pre></td></tr></table></figure>
+
+<h2 id="非对称加密"><a href="#非对称加密" class="headerlink" title="非对称加密"></a>非对称加密</h2><p>非对称加密算法需要两个密钥：公开密钥（publickey）和私有密钥（privatekey）。公开密钥与私有密钥是一对，如果用公开密钥对数据进行加密，只有用对应的私有密钥才能解密；如果用私有密钥对数据进行加密，那么只有用对应的公开密钥才能解密（这个过程可以做数字签名）。<br>非对称加密主要使用的是RSA算法。  </p>
+<h3 id="开发者建议-5"><a href="#开发者建议-5" class="headerlink" title="开发者建议"></a>开发者建议</h3><p>1、注意密钥长度不要低于512位，建议使用2048位的密钥长度。 使用RSA进行数字签名的算法，如：  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//生成密钥</span></span><br><span class="line"><span class="type">KeyPairGenerator</span> <span class="variable">keyPairGenerator</span> <span class="operator">=</span> KeyPairGenerator.getInstance(<span class="string">&quot;RSA&quot;</span>); </span><br><span class="line">keyPairGenerator.initialize(<span class="number">2048</span>);</span><br><span class="line"><span class="type">KeyPair</span> <span class="variable">keyPair</span> <span class="operator">=</span> keyPairGenerator.generateKeyPair();</span><br><span class="line">RSAPublicKeyrsaPublicKey=(RSAPublicKey)keyPair.getPublic();</span><br><span class="line">RSAPrivateKeyrsaPrivateKey =(RSAPrivateKey)keyPair.getPrivate()</span><br><span class="line"></span><br><span class="line"><span class="comment">//签名</span></span><br><span class="line"><span class="type">PKCS8EncodedKeySpec</span> <span class="variable">pkcs8EncodedKeySpec</span> <span class="operator">=</span> newPKCS8EncodedKeySpec(rsaPrivateKey.getEncoded()) </span><br><span class="line"><span class="type">KeyFactory</span> <span class="variable">keyFactory</span> <span class="operator">=</span> KeyFactory <span class="title function_">getInstance</span><span class="params">(<span class="string">&quot;RSA&quot;</span>)</span>;</span><br><span class="line"><span class="type">PrivateKey</span> <span class="variable">privateKey</span> <span class="operator">=</span> keyFactory.generatePrivate(pkcs8EncodedKeySpec); </span><br><span class="line"><span class="type">signature</span> <span class="variable">signature</span> <span class="operator">=</span> Signature.getInstance(<span class="string">&quot;SHA256withRSA&quot;</span>); </span><br><span class="line">signature.initSign(privateKey);</span><br><span class="line">signature.update(src.getBytes());</span><br><span class="line"><span class="type">byte</span>[] result = signature.sign();</span><br></pre></td></tr></table></figure>
+<p>2、使用RSA算法做加密，RSA加密算法应使用Cipher.getInstance(RSA/ECB/OAEPWithSHA256AndMGF1Padding)，否则会存在重放攻击的风险。 如：  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">KeyPairGenerator</span> <span class="variable">keyPairGenerator</span> <span class="operator">=</span></span><br><span class="line">KeyPairGenerator.getInstance(<span class="string">&quot;RSA&quot;</span>);</span><br><span class="line">keyPairGenerator.initialize(<span class="number">2048</span>);</span><br><span class="line"><span class="type">KeyPair</span> <span class="variable">keyPair</span> <span class="operator">=</span> keyPairGenerator.generateKeyPair();</span><br><span class="line">RSAPublicKeyrsaPublicKey=(RSAPublicKey)keyPair.getPublic();</span><br><span class="line">RSAPrivateKey rsaPrivateKey=(RSAPrivateKey)keyPair.getPrivate();</span><br><span class="line"></span><br><span class="line"><span class="comment">//公钥加密</span></span><br><span class="line"><span class="type">X509EncodedKeySpec</span> <span class="variable">x509EncodedKeySpec</span> <span class="operator">=</span> newX509EncodedKeySpec(rsaPublicKey.getEncoded()): </span><br><span class="line"><span class="type">KeyFactory</span> <span class="variable">keyFactory</span> <span class="operator">=</span> KeyFactory.getInstance(<span class="string">&quot;RSA&quot;</span>);</span><br><span class="line"><span class="type">PublicKey</span> <span class="variable">publicKey</span> <span class="operator">=</span> keyFactory.generatePublic(x509EncodedKeySpec);</span><br><span class="line"><span class="type">Cipher</span> <span class="variable">cipher</span> <span class="operator">=</span> Cipher.getInstance(<span class="string">&quot;RSA/ECB/OAEPWithSHA256AndMGF1Padding&quot;</span>); </span><br><span class="line">cipher.init(Cipher.ENCRYPT_MODE，publicKey); </span><br><span class="line"><span class="type">byte</span>[] result =cipher.doFinal(src.getBytes());</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"><span class="comment">//私钥解密</span></span><br><span class="line"><span class="type">PKCS8EncodedKeySpec</span> <span class="variable">pkcs8EncodedKeySpec</span> <span class="operator">=</span> newPKCS8EncodedKeySpec(rsaPrivateKey.getEncoded());</span><br><span class="line"><span class="type">KeyFactory</span> <span class="variable">keyFactory2</span> <span class="operator">=</span> KeyFactory.getInstance(<span class="string">&quot;RSA&quot;</span>);</span><br><span class="line"><span class="type">PrivateKey</span> <span class="variable">privateKey</span> <span class="operator">=</span> keyFactory2.generatePrivate(pkcs8EncodedKeySpec); </span><br><span class="line"><span class="type">Cipher</span> <span class="variable">cipher</span> <span class="operator">=</span> Cipher.getInstance(<span class="string">&quot;RSA/ECB/OAEPWithSHA256AndMGF1Padding&quot;</span>); </span><br><span class="line">cipher.init(Cipher.DECRYPT_MODE，privateKey);</span><br><span class="line"><span class="type">byte</span>[] result2 = cipher.doFinal(result); </span><br></pre></td></tr></table></figure>
+
+<h2 id="加密算法PBE"><a href="#加密算法PBE" class="headerlink" title="加密算法PBE"></a>加密算法PBE</h2><p>PBE是一种基于口令的加密算法，其特点是使用口令代替了密钥，而口令由用户自己掌管，采用随机数杂凑多重加密等方法保证数据的安全性。  </p>
+<p><strong>开发者建议：</strong><br>使用基于口令的加密算法PBE时，生成密钥时要加盐，盐的取值最好来自SecureRandom，并指定迭代次数。 如：  </p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//初始化盐</span></span><br><span class="line">mSalt = <span class="keyword">new</span> <span class="title class_">byte</span>[SALT_LENGTH_BYTES]; </span><br><span class="line"><span class="type">SecureRandom</span> <span class="variable">sr</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">SecureRandom</span>(); </span><br><span class="line">sr.nextBytes(mSalt);</span><br><span class="line"></span><br><span class="line"><span class="type">SecretKeyFactory</span> <span class="variable">secretKeyFactory</span> <span class="operator">=</span> SecretKeyFactory.getInstance(KEY_GENERATOR_MODE);</span><br><span class="line">keySpec = <span class="keyword">new</span> <span class="title class_">PBEKeySpec</span>(password, salt, KEY_GEN_ITERATION_COUNT, KEY_LENGTH_BITS); </span><br><span class="line">secretKey = secretKeyFactory.generateSecret(keySpec); </span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><h3 id="几条原则"><a href="#几条原则" class="headerlink" title="几条原则"></a>几条原则</h3><p>1、不要自己设计加密算法和协议，使用业界标准的算法。<br>2、对称加密算法不要使用ECB模式，不建议使用DES算法。<br>3、要选择合适长度的密钥。<br>4、要确保随机数生成器的种子具有足够的信息熵。<br>5、不要使用没有消息认证的加密算法加密消息，无法防重放。<br>6、当多个字符串拼接后做hash，要非常当心。<br>7、当给算法加盐取值时不要太短，不要重复。<br>8、使用初始化向量时IV时，IV为常量的CBC，CFB，GCM等和ECB一样可以重放，即采用上一个消息的最后一块密文作为下一个消息的IV，是不安全的。<br>9、密钥应遵循的原则 ：  </p>
+<ul>
+<li>（1）密钥不能为常量，应随机，定期更换，如果加密数据时使用的密钥为常量，则相同明文加密会得到相同的密文，很难防止字典攻击。  </li>
+<li>（2）开发同学要防范密钥硬编码的问题。  </li>
+</ul>
+<h3 id="密钥存储安全性从高到低"><a href="#密钥存储安全性从高到低" class="headerlink" title="密钥存储安全性从高到低"></a>密钥存储安全性从高到低</h3><ul>
+<li>密钥存储在硬件支持的Android KeyStore中</li>
+<li>所有密钥都存储在服务器上，并在强身份验证后可用</li>
+<li>主密钥存储在服务器上，用于加密存储在Android SharedPreferences中的其他密钥</li>
+<li>密钥存储在Android KeyStore的软件实现中</li>
+<li>主密钥存储在Android密钥库的软件实现中，用于加密存储在SharedPreferences中的其他密钥</li>
+<li>所有密钥都存储在SharedPreferences中（不建议）</li>
+<li>在源代码中硬编码加密密钥（不建议）</li>
+<li>基于稳定属性的可预测模糊函数或密钥生成函数（不建议）</li>
+<li>将生成的密钥存储在外部存储（如/sdcard/）（不建议）</li>
+</ul>
+<p>参考文章：</p>
+<p><a href="https://blog.oversecured.com/Use-cryptography-in-mobile-apps-the-right-way/">https://blog.oversecured.com/Use-cryptography-in-mobile-apps-the-right-way/</a></p>
+<p><a href="http://www.52im.net/thread-216-1-1.html">http://www.52im.net/thread-216-1-1.html</a></p>
+<p>推荐阅读：<br><a href="https://mp.weixin.qq.com/s/AWHTLT1CBMAI5tdXYzDXIA">移动应用人脸识别风险与检测</a><br><a href="https://mp.weixin.qq.com/s/RzdyDWRZ4un2_mC4Om8XZg">过某加固Frida检测</a><br><a href="https://mp.weixin.qq.com/s/dV2JzXfgjDdCmWRmE0glDA">某涉黄APP产业链分析</a></p>
+]]></content>
+      <categories>
+        <category>移动安全</category>
+      </categories>
+      <tags>
+        <tag>加解密</tag>
+        <tag>信息安全</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>抓包那些事</title>
     <url>/2023/03/09/%E6%8A%93%E5%8C%85%E9%82%A3%E4%BA%9B%E4%BA%8B/</url>
     <content><![CDATA[<p>抓的是包不是人，包也不是那个包，是数据包，为什么要抓数据包呢，因为信安人要分析数据包，分析数据包做什么，看看数据包有没有什么信息泄漏，有没有什么漏洞，当然还有很多用途，以后我们慢慢介绍。<br>以下的内容足以解决95%的抓包问题，请大家饭后食用。</p>
@@ -722,6 +883,24 @@
       </tags>
   </entry>
   <entry>
+    <title>重放攻击防御手段</title>
+    <url>/2022/05/14/%E9%87%8D%E6%94%BE%E6%94%BB%E5%87%BB%E9%98%B2%E5%BE%A1%E6%89%8B%E6%AE%B5/</url>
+    <content><![CDATA[<h2 id="重放攻击"><a href="#重放攻击" class="headerlink" title="重放攻击"></a>重放攻击</h2><p>入侵者从网络上截取主机A发送给主机B的报文，并把由A加密的报文发送给B，使主机B误以为入侵者就是主机A，然后主机B向伪装成A的入侵者发送应当发送给A的报文。</p>
+<h3 id="防御手段"><a href="#防御手段" class="headerlink" title="防御手段"></a>防御手段</h3><p>防止重放攻击的方法是使用不重数</p>
+<h4 id="1-加随机数"><a href="#1-加随机数" class="headerlink" title="1. 加随机数"></a>1. 加随机数</h4><p>该方法优点是认证双方不需要时间同步，双方记住使用过的随机数，如发现报文中有以前使用过的随机数，就认为是重放攻击。缺点是需要额外保存使用过的随机数，若记录的时间段较长，则保存和查询的开销较大。</p>
+<h4 id="2-加时间戳"><a href="#2-加时间戳" class="headerlink" title="2. 加时间戳"></a>2. 加时间戳</h4><p>该方法优点是不用额外保存其他信息。缺点是认证双方需要准确的时间同步，同步越好，受攻击的可能性就越小。但当系统很庞大，跨越的区域较广时，要做到精确的时间同步并不是很容易。</p>
+<h4 id="3-加流水号"><a href="#3-加流水号" class="headerlink" title="3. 加流水号"></a>3. 加流水号</h4><p>就是双方在报文中添加一个逐步递增的整数，只要接收到一个不连续的流水号报文(太大或太小)，就认定有重放威胁。该方法优点是不需要时间同步，保存的信息量比随机数方式小。缺点是一旦攻击者对报文解密成功，就可以获得流水号，从而每次将流水号递增欺骗认证端。</p>
+<p>在实际中，常将方法(1)和方法(2)组合使用，这样就只需保存某个很短时间段内的所有随机数，而且时间戳的同步也不需要太精确（最通常的做法是利用时间戳+随机数字生成随机码,并入交互报文中即可）。<br>对付重放攻击除了使用本以上方法外，还可以使用挑战一应答机制和一次性口令机制，而且似乎后面两种方法在实际中使用得更广泛。</p>
+]]></content>
+      <categories>
+        <category>web防御手段</category>
+      </categories>
+      <tags>
+        <tag>重放攻击</tag>
+        <tag>防御手段</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>某病毒APP防护破解</title>
     <url>/2023/02/14/%E6%9F%90%E7%97%85%E6%AF%92APP%E9%98%B2%E6%8A%A4%E7%A0%B4%E8%A7%A3/</url>
     <content><![CDATA[<p>今天星友求助一个类似杀猪盘的样本。该样本有以下几个点需要攻克：</p>
@@ -748,24 +927,6 @@
       <tags>
         <tag>病毒</tag>
         <tag>防护</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>重放攻击防御手段</title>
-    <url>/2022/05/14/%E9%87%8D%E6%94%BE%E6%94%BB%E5%87%BB%E9%98%B2%E5%BE%A1%E6%89%8B%E6%AE%B5/</url>
-    <content><![CDATA[<h2 id="重放攻击"><a href="#重放攻击" class="headerlink" title="重放攻击"></a>重放攻击</h2><p>入侵者从网络上截取主机A发送给主机B的报文，并把由A加密的报文发送给B，使主机B误以为入侵者就是主机A，然后主机B向伪装成A的入侵者发送应当发送给A的报文。</p>
-<h3 id="防御手段"><a href="#防御手段" class="headerlink" title="防御手段"></a>防御手段</h3><p>防止重放攻击的方法是使用不重数</p>
-<h4 id="1-加随机数"><a href="#1-加随机数" class="headerlink" title="1. 加随机数"></a>1. 加随机数</h4><p>该方法优点是认证双方不需要时间同步，双方记住使用过的随机数，如发现报文中有以前使用过的随机数，就认为是重放攻击。缺点是需要额外保存使用过的随机数，若记录的时间段较长，则保存和查询的开销较大。</p>
-<h4 id="2-加时间戳"><a href="#2-加时间戳" class="headerlink" title="2. 加时间戳"></a>2. 加时间戳</h4><p>该方法优点是不用额外保存其他信息。缺点是认证双方需要准确的时间同步，同步越好，受攻击的可能性就越小。但当系统很庞大，跨越的区域较广时，要做到精确的时间同步并不是很容易。</p>
-<h4 id="3-加流水号"><a href="#3-加流水号" class="headerlink" title="3. 加流水号"></a>3. 加流水号</h4><p>就是双方在报文中添加一个逐步递增的整数，只要接收到一个不连续的流水号报文(太大或太小)，就认定有重放威胁。该方法优点是不需要时间同步，保存的信息量比随机数方式小。缺点是一旦攻击者对报文解密成功，就可以获得流水号，从而每次将流水号递增欺骗认证端。</p>
-<p>在实际中，常将方法(1)和方法(2)组合使用，这样就只需保存某个很短时间段内的所有随机数，而且时间戳的同步也不需要太精确（最通常的做法是利用时间戳+随机数字生成随机码,并入交互报文中即可）。<br>对付重放攻击除了使用本以上方法外，还可以使用挑战一应答机制和一次性口令机制，而且似乎后面两种方法在实际中使用得更广泛。</p>
-]]></content>
-      <categories>
-        <category>web防御手段</category>
-      </categories>
-      <tags>
-        <tag>重放攻击</tag>
-        <tag>防御手段</tag>
       </tags>
   </entry>
 </search>
